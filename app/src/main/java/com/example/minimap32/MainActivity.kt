@@ -1,6 +1,7 @@
 package com.example.minimap32
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.content.Intent
@@ -18,6 +19,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var bluetoothAdapter: BluetoothAdapter
 
     // Request MULTIPLE permissions at once
+    @SuppressLint("MissingPermission")
     private val requestBluetoothPermissions =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
             android.util.Log.d("MainActivity", "📋 Permission results: $permissions")
