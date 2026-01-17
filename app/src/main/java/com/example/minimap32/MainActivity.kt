@@ -1,5 +1,6 @@
 package com.example.minimap32
 
+import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.content.Intent
@@ -8,6 +9,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresPermission
 import com.example.minimap32.presentation.BleScreen
 import com.example.minimap32.ui.theme.MiniMap32Theme
 
@@ -75,6 +77,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     private fun initBluetooth() {
         val bluetoothManager =
             getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
