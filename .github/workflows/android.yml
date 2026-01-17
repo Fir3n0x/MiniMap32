@@ -95,6 +95,9 @@ jobs:
         path: release-apks/*.apk
 
   deploy:
+    permissions: 
+      contents: write
+    
     needs: build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
@@ -161,6 +164,5 @@ jobs:
         prerelease: false
         files: |
           apk-files/*.apk
-          app/build/outputs/mapping/release/mapping.txt
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
