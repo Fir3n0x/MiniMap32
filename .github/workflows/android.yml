@@ -1,0 +1,166 @@
+name: Android CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      VERSION: ${{ steps.version.outputs.VERSION }}
+      TAG_NAME: ${{ steps.version.outputs.TAG_NAME }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Needed for changelog generation
+
+    - name: Extract Version
+      id: version
+      run: |
+        # Extract version with robust parsing
+        VERSION=$(grep -E '^\s*versionName\s*=' app/build.gradle.kts | sed -E 's/.*"([0-9]+\.[0-9]+(\.[0-9]+)?)".*/\1/')
+        
+        # Ensure proper format (add .0 if only X.Y format)
+        [[ "$VERSION" =~ ^[0-9]+\.[0-9]+$ ]] && VERSION="${VERSION}.0"
+        
+        # Validate format
+        if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "::error::Invalid version format. Found '$VERSION' but expected MAJOR.MINOR.PATCH"
+          exit 1
+        fi
+        
+        echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+        echo "TAG_NAME=v${VERSION}" >> $GITHUB_OUTPUT
+
+    - name: Debug version
+      run: |
+        echo "VERSION: ${{ steps.version.outputs.VERSION }}"
+        echo "TAG_NAME: ${{ steps.version.outputs.TAG_NAME }}"
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: 17
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x ./gradlew
+
+    - name: Build with Gradle
+      run: ./gradlew build
+
+    - name: Run unit tests
+      run: ./gradlew test
+
+    - name: Run Lint
+      run: ./gradlew lint
+
+    - name: Build Release APK
+      run: ./gradlew assembleRelease
+
+    - name: Prepare APKs
+      run: |
+        mkdir -p release-apks
+    
+        echo "Looking for APKs in:"
+        find app/build/outputs/apk -name '*.apk' || echo "No APKs found"
+    
+        find app/build/outputs/apk -name '*.apk' -exec cp {} release-apks/ \;
+    
+        echo "Copied APKs:"
+        ls -la release-apks/
+    
+        VERSION="${{ steps.version.outputs.VERSION }}"
+    
+        for f in release-apks/*.apk; do
+          if [[ "$f" != *"debug"* ]]; then
+            new_name="release-apks/MiniMap32-v${VERSION}.apk"
+            mv "$f" "$new_name"
+          else
+            rm "$f"
+          fi
+        done
+    
+        echo "Final APKs:"
+        ls -la release-apks/
+        
+    - name: Upload Release APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-release
+        path: release-apks/*.apk
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Debug Outputs
+      run: |
+        echo "Build outputs:"
+        echo "VERSION: ${{ needs.build.outputs.VERSION }}"
+        echo "TAG_NAME: ${{ needs.build.outputs.TAG_NAME }}"
+
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: app-release
+        path: apk-files/
+
+    - name: Clean Duplicate APKs
+      run: |
+        cd apk-files
+        # Keep only the properly named APK
+        ls | grep -v 'MiniMap32-v' | xargs rm -f
+        ls -la
+
+    - name: Verify APK exists
+      run: |
+        echo "APK files:"
+        ls -la apk-files/
+        if [ $(ls apk-files/ | wc -l) -eq 0 ]; then
+          echo "Error: No APK files found!"
+          exit 1
+        fi
+
+    - name: Check if tag exists
+      id: check_tag
+      run: |
+        TAG=${{ needs.build.outputs.TAG_NAME }}
+        if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+          echo "::error::Tag $TAG already exists! Update versionName in build.gradle.kts"
+          echo "TAG_EXISTS=true" >> $GITHUB_OUTPUT
+          exit 1
+        else
+          echo "TAG_EXISTS=false" >> $GITHUB_OUTPUT
+        fi
+    - name: Create Release
+      if: steps.check_tag.outputs.TAG_EXISTS == 'false'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ needs.build.outputs.TAG_NAME }}
+        name: MiniMap32 ${{ needs.build.outputs.TAG_NAME }}
+        body: |
+          ### Version ${{ needs.build.outputs.VERSION }}
+          Release automatically generated from GitHub Actions
+          
+          ### Assets
+          - APK file
+          - ProGuard mapping file
+        draft: false
+        prerelease: false
+        files: |
+          apk-files/*.apk
+          app/build/outputs/mapping/release/mapping.txt
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
