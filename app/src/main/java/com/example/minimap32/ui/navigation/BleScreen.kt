@@ -1,4 +1,4 @@
-package com.example.minimap32.presentation
+package com.example.minimap32.ui.navigation
 
 
 import android.annotation.SuppressLint

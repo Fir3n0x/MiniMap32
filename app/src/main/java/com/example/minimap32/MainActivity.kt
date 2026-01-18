@@ -11,7 +11,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresPermission
-import com.example.minimap32.presentation.BleScreen
+import com.example.minimap32.ui.navigation.AppNavigation
 import com.example.minimap32.ui.theme.MiniMap32Theme
 
 class MainActivity : ComponentActivity() {
@@ -40,7 +40,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MiniMap32Theme{
-                BleScreen()
+                AppNavigation()
             }
         }
 

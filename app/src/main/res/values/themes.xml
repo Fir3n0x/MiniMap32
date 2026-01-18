@@ -2,4 +2,9 @@
 <resources>
 
     <style name="Theme.MiniMap32" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <style name="Theme.Hacker" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/black_bg</item>
+        <item name="android:textColor">@color/white_text</item>
+    </style>
 </resources>

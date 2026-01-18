@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">MiniMap32</string>
+    <string name="app_name">MINIMAP32</string>
+    <string name="connect">CONNECT</string>
 </resources>

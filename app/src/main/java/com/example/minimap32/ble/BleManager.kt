@@ -11,9 +11,11 @@ import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.core.app.ActivityCompat
+import com.example.minimap32.model.BleDevice
 import com.example.minimap32.model.MAC
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.util.UUID
 
 class BleManager(
@@ -26,24 +28,30 @@ class BleManager(
     private var gatt: BluetoothGatt? = null
     private var isConnected = false
 
-    private val SERVICE_UUID =
+    private val serviceUUID =
         UUID.fromString("4fafc201-1fb5-459e-8fcc-c5c9c331914b")
 
     // Android -> ESP32 (WRITE)
-    private val CMD_UUID =
+    private val cmdUUID =
         UUID.fromString("beb5483e-36e1-4688-b7f5-ea07361b26a8")
 
     // ESP32 -> Android (NOTIFY)
-    private val STATUS_UUID =
+    private val statusUUID =
         UUID.fromString("9d8c2d3a-7a12-4d3f-8f58-bc6b4f9c1123")
 
     // Descriptor
-    private val CCCD_UUID =
+    private val cccdUUID =
         UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
 
     // Handle mac event
     private val _macEvents = MutableStateFlow<List<MAC>>(emptyList())
     val macEvents: StateFlow<List<MAC>> = _macEvents
+
+    // Handle Discovered BLE devices
+    val devices = MutableStateFlow<List<BluetoothDevice>>(emptyList())
+
+    // Handle BLE connection state
+    val connectionEvents = MutableStateFlow<BleConnectionState>(BleConnectionState.Idle)
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
     fun startScan() {
@@ -51,25 +59,25 @@ class BleManager(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             // Android 12+ requires BLUETOOTH_SCAN
             if (!hasPermission(Manifest.permission.BLUETOOTH_SCAN)) {
-                Log.e("BLE", "❌ Permission BLUETOOTH_SCAN manquante!")
+                Log.e("BLE", "[W] Permission BLUETOOTH_SCAN missing!")
                 return
             }
         } else {
             // Android < 12 requires LOCATION permission for BLE scan
             if (!hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
-                Log.e("BLE", "❌ Permission ACCESS_FINE_LOCATION manquante!")
+                Log.e("BLE", "[W] Permission ACCESS_FINE_LOCATION missing!")
                 return
             }
         }
 
         bluetoothAdapter.bluetoothLeScanner.startScan(scanCallback)
-        Log.d("BLE", "🔍 Scan started")
+        Log.d("BLE", "[I] Scan started")
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
     fun stopScan() {
         bluetoothAdapter.bluetoothLeScanner.stopScan(scanCallback)
-        Log.d("BLE", "Scan stopped")
+        Log.d("BLE", "[I] Scan stopped")
     }
 
     private val scanCallback = object : ScanCallback() {
@@ -85,29 +93,42 @@ class BleManager(
 
             Log.d("BLE", "Found device: $deviceName (RSSI: ${result.rssi})")
 
-            if (deviceName == "Minimap32") {
-                // Only connect if signal is strong enough
-                if (result.rssi < -90) {
-                    Log.d("BLE", "⚠️ Signal too weak (${result.rssi}), waiting...")
-                    return
-                }
-
-                Log.d("BLE", "✅ ESP32 trouvé")
-                bluetoothAdapter.bluetoothLeScanner.stopScan(this)
-                connect(device)
+            if(devices.value.none { it.address == device.address}) {
+                devices.value += device
             }
+
+//            val bleDevice = BleDevice(
+//                name = device.name ?: "Unknown",
+//                mac = device.address
+//            )
+//
+//            if(devices.value.none { it.mac == bleDevice.mac}) {
+//                devices.value += bleDevice
+//            }
+
+//            if (deviceName == "Minimap32") {
+//                // Only connect if signal is strong enough
+//                if (result.rssi < -90) {
+//                    Log.d("BLE", "[W] Signal too weak (${result.rssi}), waiting...")
+//                    return
+//                }
+//
+//                Log.d("BLE", "[I] ESP32 trouvé")
+//                bluetoothAdapter.bluetoothLeScanner.stopScan(this)
+//                connect(device)
+//            }
         }
 
         override fun onScanFailed(errorCode: Int) {
-            Log.e("BLE", "❌ Scan failed: $errorCode")
+            Log.e("BLE", "[F] Scan failed: $errorCode")
         }
     }
 
     @SuppressLint("MissingPermission")
-    private fun connect(device: BluetoothDevice) {
+    fun connect(device: BluetoothDevice) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (!hasPermission(Manifest.permission.BLUETOOTH_CONNECT)) {
-                Log.e("BLE", "❌ Permission BLUETOOTH_CONNECT manquante!")
+                Log.e("BLE", "[W] Permission BLUETOOTH_CONNECT missing!")
                 return
             }
         }
@@ -122,7 +143,7 @@ class BleManager(
                 @androidx.annotation.RequiresPermission(
                     android.Manifest.permission.BLUETOOTH_CONNECT
                 ) {
-                    Log.d("BLE", "🔌 Connecting to device...")
+                    Log.d("BLE", "[I] Connecting to device...")
 
                     // Try connection with autoConnect = true for more stable connection
                     gatt = device.connectGatt(
@@ -147,25 +168,38 @@ class BleManager(
                 if (!hasPermission(Manifest.permission.BLUETOOTH_CONNECT)) return
             }
 
-            when {
-                status == 133 -> {
-                    Log.e("BLE", "❌ Connection failed (status 133), retrying...")
-                    gatt.close()
-                    // Don't retry here - let user manually retry
-                }
+            if (status != BluetoothGatt.GATT_SUCCESS) {
+                Log.e("BLE", "[F] Connection failed: status=$status")
+                connectionEvents.value =
+                    BleConnectionState.Error("Connection failed (status=$status)")
+                gatt.close()
+                return
+            }
 
-                newState == BluetoothProfile.STATE_CONNECTED -> {
-                    Log.d("BLE", "🔗 Connected, requesting MTU...")
+            when (newState) {
+                BluetoothProfile.STATE_CONNECTED -> {
+                    // Update ble connection state
+                    connectionEvents.value = BleConnectionState.Connected
+
+                    Log.d("BLE", "[I] Connected, requesting MTU...")
                     gatt.requestMtu(64)
-                    Log.d("BLE", "🔗 Connecté, discovering services...")
+                    Log.d("BLE", "[I] Connected, discovering services...")
 
                     isConnected = true
                 }
+                BluetoothProfile.STATE_DISCONNECTED -> {
+                    // Update ble connection state
+                    connectionEvents.value = BleConnectionState.Disconnected
 
-                newState == BluetoothProfile.STATE_DISCONNECTED -> {
-                    Log.d("BLE", "❌ Déconnecté")
+                    Log.d("BLE", "[I] Disconnected")
                     isConnected = false
                     gatt.close()
+                }
+                else -> {
+                    // Update ble connection state
+                    connectionEvents.value = BleConnectionState.Error("Connection failed")
+
+                    Log.d("BLE", "[F] Connection failed")
                 }
             }
         }
@@ -173,12 +207,19 @@ class BleManager(
         @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
         override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                Log.d("BLE", "✅ MTU negotiated: $mtu")
+                // Update ble connection state
+                connectionEvents.value = BleConnectionState.MtuRequested
+
+                Log.d("BLE", "[I] MTU negotiated: $mtu")
                 gatt.discoverServices()
             } else {
-                Log.e("BLE", "❌ MTU request failed")
+                // Update ble connection state
+                connectionEvents.value = BleConnectionState.Error("MTU failed")
+
+                Log.e("BLE", "[F] MTU request failed")
             }
         }
+
 
         @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
@@ -187,26 +228,32 @@ class BleManager(
             }
 
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                Log.d("BLE", "📡 Services discovered!")
-
-                val service = gatt.getService(SERVICE_UUID)
+                val service = gatt.getService(serviceUUID)
                 if (service == null) {
-                    Log.e("BLE", "❌ Service not found!")
+                    connectionEvents.value = BleConnectionState.Error("Service not found.")
+                    Log.e("BLE", "[F] Service not found!")
                     return
                 }
 
-                val statusChar = service.getCharacteristic(STATUS_UUID)
+                // Update ble connection state
+                connectionEvents.value = BleConnectionState.ServicesDiscovered
+
+                Log.d("BLE", "[I] Services discovered!")
+
+                val statusChar = service.getCharacteristic(statusUUID)
                 if (statusChar == null) {
-                    Log.e("BLE", "❌ STATUS characteristic not found!")
+                    connectionEvents.value = BleConnectionState.Error("Status not found.")
+                    Log.e("BLE", "[F] STATUS characteristic not found!")
                     return
                 }
 
                 // Enable notifications - USE NEW API
                 gatt.setCharacteristicNotification(statusChar, true)
 
-                val cccd = statusChar.getDescriptor(CCCD_UUID)
+                val cccd = statusChar.getDescriptor(cccdUUID)
                 if (cccd == null) {
-                    Log.e("BLE", "❌ CCCD descriptor not found!")
+                    connectionEvents.value = BleConnectionState.Error("CCCD descriptor not found.")
+                    Log.e("BLE", "[F] CCCD descriptor not found!")
                     return
                 }
 
@@ -220,9 +267,11 @@ class BleManager(
                     gatt.writeDescriptor(cccd)
                 }
 
-                Log.d("BLE", "✅ Notifications enabled!")
+                Log.d("BLE", "[I] Notifications enabled!")
+
             } else {
-                Log.e("BLE", "❌ Service discovery failed: $status")
+                connectionEvents.value = BleConnectionState.Error("Service discovery failed")
+                Log.e("BLE", "[F] Service discovery failed: $status")
             }
         }
 
@@ -232,9 +281,13 @@ class BleManager(
             status: Int
         ) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                Log.d("BLE", "✅ Descriptor written successfully")
+                Log.d("BLE", "[I] Descriptor written successfully")
+
+                // SET READY STATE HERE - after descriptor is confirmed written
+                connectionEvents.value = BleConnectionState.Ready
             } else {
-                Log.e("BLE", "❌ Descriptor write failed: $status")
+                Log.e("BLE", "[F] Descriptor write failed: $status")
+                connectionEvents.value = BleConnectionState.Error("Descriptor write failed")
             }
         }
 
@@ -244,9 +297,9 @@ class BleManager(
             status: Int
         ) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                Log.d("BLE", "✅ Characteristic written successfully")
+                Log.d("BLE", "[I] Characteristic written successfully")
             } else {
-                Log.e("BLE", "❌ Characteristic write failed: $status")
+                Log.e("BLE", "[F] Characteristic write failed: $status")
             }
         }
 
@@ -255,10 +308,10 @@ class BleManager(
             characteristic: BluetoothGattCharacteristic,
             value: ByteArray
         ) {
-            if (characteristic.uuid != STATUS_UUID) return
+            if (characteristic.uuid != statusUUID) return
 
             val msg = value.toString(Charsets.UTF_8)
-            Log.d("BLE", "📥 NOTIFY: $msg")
+            Log.d("BLE", "[I] NOTIFY: $msg")
 
             // Format: MAC,RSSI,CHANNEL
             val parts = msg.split(",")
@@ -292,25 +345,25 @@ class BleManager(
     fun sendCommand(cmd: String) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (!hasPermission(Manifest.permission.BLUETOOTH_CONNECT)) {
-                Log.e("BLE", "❌ Permission BLUETOOTH_CONNECT manquante!")
+                Log.e("BLE", "[W] Permission BLUETOOTH_CONNECT missing!")
                 return
             }
         }
 
         if (!isConnected) {
-            Log.e("BLE", "❌ Not connected!")
+            Log.e("BLE", "[F] Not connected!")
             return
         }
 
-        val service = gatt?.getService(SERVICE_UUID)
+        val service = gatt?.getService(serviceUUID)
         if (service == null) {
-            Log.e("BLE", "❌ Service not found!")
+            Log.e("BLE", "[F] Service not found!")
             return
         }
 
-        val cmdChar = service.getCharacteristic(CMD_UUID)
+        val cmdChar = service.getCharacteristic(cmdUUID)
         if (cmdChar == null) {
-            Log.e("BLE", "❌ CMD characteristic not found!")
+            Log.e("BLE", "[F] CMD characteristic not found!")
             return
         }
 
@@ -329,23 +382,33 @@ class BleManager(
             gatt?.writeCharacteristic(cmdChar)
         }
 
-        Log.d("BLE", "📤 CMD sent: $cmd")
+        Log.d("BLE", "[I] CMD sent: $cmd")
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun disconnect() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (hasPermission(Manifest.permission.BLUETOOTH_CONNECT)) {
-                gatt?.disconnect()
-                gatt?.close()
-            }
-        } else {
-            gatt?.disconnect()
-            gatt?.close()
-        }
+        // Disconnect GATT
+        gatt?.disconnect()
+        gatt?.close()
         gatt = null
+
+        // Reset internal flags
         isConnected = false
     }
+
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+    fun resetSession() {
+        Log.d("BLE", "[I] Reset BLE session")
+
+        // disconnect
+        disconnect()
+
+        // RESET ALL STATES
+        connectionEvents.value = BleConnectionState.Idle
+        _macEvents.value = emptyList()
+        devices.value = emptyList()
+    }
+
 
     fun clearMacDiplayed() {
         _macEvents.value = emptyList()
