@@ -1,5 +1,6 @@
 package com.example.minimap32.ui.screens
 
+import android.annotation.SuppressLint
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -20,6 +21,7 @@ import com.example.minimap32.ble.BleConnectionState
 import com.example.minimap32.viewmodel.BleViewModel
 import kotlinx.coroutines.delay
 
+@SuppressLint("MissingPermission")
 @Composable
 fun ConnectedScreen(navController: NavController, viewModel: BleViewModel) {
 
