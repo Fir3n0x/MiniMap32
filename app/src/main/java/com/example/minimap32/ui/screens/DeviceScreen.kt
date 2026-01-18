@@ -1,5 +1,6 @@
 package com.example.minimap32.ui.screens
 
+import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -26,6 +27,7 @@ import androidx.navigation.NavController
 import com.example.minimap32.model.BleDevice
 import com.example.minimap32.viewmodel.BleViewModel
 
+@SuppressLint("MissingPermission")
 @Composable
 fun DeviceScreen(navController: NavController, viewModel: BleViewModel) {
     val devices by viewModel.devices.collectAsState()
