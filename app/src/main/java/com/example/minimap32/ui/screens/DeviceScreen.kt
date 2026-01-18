@@ -56,6 +56,7 @@ fun DeviceScreen(navController: NavController, viewModel: BleViewModel) {
     }
 }
 
+@SuppressLint("MissingPermission")
 @Composable
 fun DeviceItem(
     device: BluetoothDevice,
