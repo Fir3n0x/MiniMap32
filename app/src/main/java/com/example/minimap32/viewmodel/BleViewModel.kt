@@ -1,5 +1,6 @@
 package com.example.minimap32.viewmodel
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.bluetooth.BluetoothDevice
 import androidx.lifecycle.AndroidViewModel
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+@SuppressLint("MissingPermission")
 class BleViewModel(application: Application) : AndroidViewModel(application) {
 
     // BleManager
