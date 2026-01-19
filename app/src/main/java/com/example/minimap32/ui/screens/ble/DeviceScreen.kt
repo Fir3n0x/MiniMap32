@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
@@ -61,12 +62,14 @@ fun DeviceScreen(navController: NavController, viewModel: BleViewModel) {
             Box(
                 modifier = Modifier
                     .align(Alignment.TopStart)
+                    .padding(start = 16.dp)
+                    .background(Color(0xFF232222), RoundedCornerShape(8.dp))
                     .clickable {
                         navController.navigate("login") {
                             popUpTo(0)
                         }
                     }
-                    .padding(start = 16.dp)
+                    .padding(horizontal = 10.dp, vertical = 2.dp)
             ) {
                 Text(
                     text = "<",
