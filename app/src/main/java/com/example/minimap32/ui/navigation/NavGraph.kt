@@ -1,5 +1,6 @@
 package com.example.minimap32.ui.navigation
 
+import android.annotation.SuppressLint
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
@@ -16,6 +17,7 @@ import com.example.minimap32.ui.screens.DeviceScreen
 import com.example.minimap32.ui.screens.LoginScreen
 import com.example.minimap32.viewmodel.BleViewModel
 
+@SuppressLint("MissingPermission")
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
