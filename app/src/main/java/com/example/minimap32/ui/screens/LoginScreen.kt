@@ -1,5 +1,6 @@
 package com.example.minimap32.ui.screens
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -21,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.minimap32.viewmodel.BleViewModel
 
+@SuppressLint("MissingPermission")
 @Composable
 fun LoginScreen(navController: NavController, viewModel: BleViewModel) {
     val selectedDevices by viewModel.selectedDevice.collectAsState()

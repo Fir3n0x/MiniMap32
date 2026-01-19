@@ -1,5 +1,6 @@
 package com.example.minimap32.ui.screens
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -26,6 +27,7 @@ import com.example.minimap32.ble.BleConnectionState
 import com.example.minimap32.viewmodel.BleViewModel
 import kotlinx.coroutines.delay
 
+@SuppressLint("MissingPermission")
 @Composable
 fun ConnectingScreen(navController: NavController, viewModel: BleViewModel) {
 
@@ -134,6 +136,7 @@ enum class LineStatus {
     ERROR
 }
 
+@SuppressLint("MissingPermission")
 @Composable
 fun HackerLine(text: String, status: LineStatus) {
 
