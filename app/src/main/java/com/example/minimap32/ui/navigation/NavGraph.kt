@@ -10,10 +10,9 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.minimap32.ble.BleConnectionState
-import com.example.minimap32.ui.screens.ConnectedScreen
-import com.example.minimap32.ui.screens.ConnectingScreen
-import com.example.minimap32.ui.screens.DeviceScreen
+import com.example.minimap32.ui.screens.wifi.ConnectedScreen
+import com.example.minimap32.ui.screens.ble.ConnectingScreen
+import com.example.minimap32.ui.screens.ble.DeviceScreen
 import com.example.minimap32.ui.screens.LoginScreen
 import com.example.minimap32.viewmodel.BleViewModel
 

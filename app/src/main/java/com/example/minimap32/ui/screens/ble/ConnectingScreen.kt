@@ -1,4 +1,4 @@
-package com.example.minimap32.ui.screens
+package com.example.minimap32.ui.screens.ble
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.background
@@ -14,7 +14,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier

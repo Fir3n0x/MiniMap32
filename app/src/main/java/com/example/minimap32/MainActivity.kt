@@ -11,8 +11,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresPermission
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import com.example.minimap32.ui.navigation.AppNavigation
 import com.example.minimap32.ui.theme.MiniMap32Theme
+
+val autowide = FontFamily(
+    Font(R.font.audiowide_regular, FontWeight.Normal)
+)
 
 class MainActivity : ComponentActivity() {
 
