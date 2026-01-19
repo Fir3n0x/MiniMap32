@@ -354,7 +354,7 @@ private fun ConnectButton(
             if (enabled) {
                 Text(
                     text = "OFFENSIVE MODE",
-                    color = Color(0xFFFF2A2A),
+                    color = Color(0xFF901D1D),
                     fontFamily = autowide,
                     fontSize = 12.sp,
                     letterSpacing = 2.sp,

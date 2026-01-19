@@ -1,9 +1,14 @@
 package com.example.minimap32.ui.screens.ble
 
+import android.R.attr.top
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,11 +21,13 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.minimap32.autowide
 import com.example.minimap32.viewmodel.BleViewModel
 
 @SuppressLint("MissingPermission")
@@ -39,15 +46,65 @@ fun DeviceScreen(navController: NavController, viewModel: BleViewModel) {
         }
     }
 
-    LazyColumn {
-        items(devices) { device ->
-            DeviceItem(
-                device = device,
-                onClick = {
-                    viewModel.selectDevice(device)
-                    navController.popBackStack()
-                }
-            )
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+    ) {
+        // Header
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp, bottom = 16.dp)
+        ) {
+            // return
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .clickable {
+                        navController.navigate("login") {
+                            popUpTo(0)
+                        }
+                    }
+                    .padding(start = 16.dp)
+            ) {
+                Text(
+                    text = "<",
+                    color = Color.Green,
+                    fontFamily = autowide,
+                    fontSize = 35.sp
+                )
+            }
+
+            // title
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 4.dp)
+            ) {
+                Text(
+                    text = "Control Panel",
+                    color = Color.Green,
+                    fontFamily = autowide,
+                    fontSize = 24.sp
+                )
+            }
+        }
+
+        // Main content
+        LazyColumn(
+            modifier = Modifier
+                .padding(top = 10.dp)
+        ) {
+            items(devices) { device ->
+                DeviceItem(
+                    device = device,
+                    onClick = {
+                        viewModel.selectDevice(device)
+                        navController.popBackStack()
+                    }
+                )
+            }
         }
     }
 }
@@ -77,6 +134,7 @@ fun DeviceItem(
         )
         Text(
             text = device.address,
+            modifier = Modifier.padding(16.dp),
             fontSize = 12.sp,
             color = Color.Gray
         )
