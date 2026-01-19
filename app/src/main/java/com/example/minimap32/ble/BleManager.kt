@@ -410,7 +410,7 @@ class BleManager(
     }
 
 
-    fun clearMacDiplayed() {
+    fun clearMacDisplayed() {
         _macEvents.value = emptyList()
     }
 

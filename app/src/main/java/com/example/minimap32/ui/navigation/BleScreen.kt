@@ -54,7 +54,7 @@ fun BleScreen() {
             Text("Send CMD")
         }
 
-        Button(onClick = { bleManager.clearMacDiplayed() }) {
+        Button(onClick = { bleManager.clearMacDisplayed() }) {
             Text("Remove current MACs")
         }
 

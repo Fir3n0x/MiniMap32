@@ -83,7 +83,7 @@ fun DeviceScreen(navController: NavController, viewModel: BleViewModel) {
                     .padding(top = 4.dp)
             ) {
                 Text(
-                    text = "Control Panel",
+                    text = "Select Device",
                     color = Color.Green,
                     fontFamily = autowide,
                     fontSize = 24.sp
