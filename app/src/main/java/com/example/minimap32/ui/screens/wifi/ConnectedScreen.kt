@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -197,10 +198,19 @@ fun TargetNetworkRow(
 ) {
     var expanded by remember { mutableStateOf(false) }
     var selectedNetwork by remember { mutableStateOf<String?>(null) }
+    val isScanning by wifiViewModel.isScanning.collectAsState()
 
     LaunchedEffect(selected) {
         if (selected == null) {
             expanded = false
+        }
+    }
+
+    // Effect triggered when expanded change
+    LaunchedEffect(expanded) {
+        if (expanded) {
+            // When opening menu
+            wifiViewModel.scanWifi()
         }
     }
 
@@ -228,16 +238,36 @@ fun TargetNetworkRow(
 
             DropdownMenu(
                 expanded = expanded,
-                onDismissRequest = { expanded = false }
+                onDismissRequest = { expanded = false },
+                modifier = Modifier
+                    .heightIn(max = 250.dp)
             ) {
-                networks.forEach { net ->
-                    DropdownMenuItem(
-                        text = { Text(net.ssid.ifBlank { "<hidden>" }) },
-                        onClick = {
-                            wifiViewModel.selectNetwork(net)
-                            expanded = false
+                when {
+                    isScanning -> {
+                        DropdownMenuItem(
+                            text = { Text("Scanning...", color = Color.Gray) },
+                            onClick = {}
+                        )
+                    }
+
+                    networks.isEmpty() -> {
+                        DropdownMenuItem(
+                            text = { Text("No network found", color = Color.Gray) },
+                            onClick = {}
+                        )
+                    }
+
+                    else -> {
+                        networks.forEach { net ->
+                            DropdownMenuItem(
+                                text = { Text(net.ssid.ifBlank { "<hidden>" }) },
+                                onClick = {
+                                    wifiViewModel.selectNetwork(net)
+                                    expanded = false
+                                }
+                            )
                         }
-                    )
+                    }
                 }
             }
         }
@@ -253,16 +283,6 @@ fun TargetNetworkRow(
             Text("X", color = Color.Red)
         }
 
-        // Refresh button
-        Box(
-            modifier = Modifier
-                .padding(start = 8.dp)
-                .background(Color(0xFF232222), RoundedCornerShape(6.dp))
-                .clickable { wifiViewModel.scanWifi() }
-                .padding(10.dp)
-        ) {
-            Text("↻", color = Color.Green)
-        }
     }
 
 }
