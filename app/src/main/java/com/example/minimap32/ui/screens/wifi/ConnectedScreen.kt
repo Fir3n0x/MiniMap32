@@ -2,6 +2,8 @@ package com.example.minimap32.ui.screens.wifi
 
 import android.annotation.SuppressLint
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -34,14 +36,24 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.minimap32.autowide
 import com.example.minimap32.ble.BleConnectionState
+import com.example.minimap32.model.WifiNetwork
 import com.example.minimap32.viewmodel.BleViewModel
+import com.example.minimap32.viewmodel.WifiViewModel
 import kotlinx.coroutines.delay
 
 @SuppressLint("MissingPermission")
 @Composable
-fun ConnectedScreen(navController: NavController, viewModel: BleViewModel) {
+fun ConnectedScreen(navController: NavController, bleViewModel: BleViewModel, wifiViewModel: WifiViewModel) {
 
-    val state by viewModel.connectionState.collectAsState()
+    // BLE Variables
+    val state by bleViewModel.connectionState.collectAsState()
+
+    // WIFI Variables
+    val networks by wifiViewModel.networks.collectAsState()
+    val selected by wifiViewModel.selectedNetwork.collectAsState()
+
+    // Expand wifi info
+    var expanded by remember { mutableStateOf(false) }
 
     BackHandler {
         navController.navigate("login") {
@@ -59,8 +71,8 @@ fun ConnectedScreen(navController: NavController, viewModel: BleViewModel) {
                 delay(1000)
 
                 // reset BLE
-                viewModel.bleManager.resetSession()
-                viewModel.clearSelection()
+                bleViewModel.bleManager.resetSession()
+                bleViewModel.clearSelection()
 
                 // navigation to login
                 navController.navigate("login") {
@@ -147,17 +159,18 @@ fun ConnectedScreen(navController: NavController, viewModel: BleViewModel) {
                 text = "Target Network",
                 color = Color.Green,
                 fontFamily = autowide,
-                fontSize = 16.sp
+                fontSize = 16.sp,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
             )
 
             Spacer(Modifier.height(12.dp))
 
-            TargetNetworkRow()
+            TargetNetworkRow(wifiViewModel, networks, selected)
 
             Spacer(Modifier.height(24.dp))
 
             // Wifi Info collapsible
-            WifiInfoSection()
+            WifiInfoSection(selected)
 
             Spacer(Modifier.height(32.dp))
 
@@ -177,51 +190,51 @@ fun ConnectedScreen(navController: NavController, viewModel: BleViewModel) {
 }
 
 @Composable
-fun TargetNetworkRow() {
+fun TargetNetworkRow(
+    wifiViewModel: WifiViewModel,
+    networks: List<WifiNetwork>,
+    selected: WifiNetwork?
+) {
     var expanded by remember { mutableStateOf(false) }
     var selectedNetwork by remember { mutableStateOf<String?>(null) }
 
-    // Fake data for now
-    val networks = listOf("HomeWifi", "OfficeNet", "ESP32_AP", "PublicWifi")
+    LaunchedEffect(selected) {
+        if (selected == null) {
+            expanded = false
+        }
+    }
+
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-
 
         // Dropdown
         Box(
             modifier = Modifier
                 .weight(1f)
+                .background(Color(0xFF1A1A1A), RoundedCornerShape(6.dp))
+                .clickable { expanded = true }
+                .padding(12.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFF1A1A1A), RoundedCornerShape(6.dp))
-                    .clickable { expanded = true }
-                    .padding(12.dp)
-            ) {
-                Text(
-                    text = selectedNetwork ?: "Select network...",
-                    color = if (selectedNetwork == null) Color.Gray else Color.White,
-                    fontFamily = autowide,
-                    fontSize = 14.sp
-                )
-            }
-
-
-
+            Text(
+                text = selected?.ssid ?: "Select a network",
+                color = Color.White,
+                fontFamily = autowide
+            )
 
             DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false }
             ) {
-                networks.forEach { network ->
+                networks.forEach { net ->
                     DropdownMenuItem(
-                        text = { Text(network) },
+                        text = { Text(net.ssid.ifBlank { "<hidden>" }) },
                         onClick = {
-                            selectedNetwork = network
+                            wifiViewModel.selectNetwork(net)
                             expanded = false
                         }
                     )
@@ -229,86 +242,67 @@ fun TargetNetworkRow() {
             }
         }
 
-        Spacer(Modifier.width(8.dp))
-
         // Clear button
-        SmallIconButton(
-            label = "X",
-            onClick = { selectedNetwork = null }
-        )
-
-
-
-
-
-        Spacer(Modifier.width(8.dp))
+        Box(
+            modifier = Modifier
+                .padding(start = 8.dp)
+                .background(Color(0xFF232222), RoundedCornerShape(6.dp))
+                .clickable { wifiViewModel.clearSelection() }
+                .padding(10.dp)
+        ) {
+            Text("X", color = Color.Red)
+        }
 
         // Refresh button
-        SmallIconButton(
-            label = "↻",
-            onClick = {
-                // TODO: callback wifi scan
-            }
-        )
+        Box(
+            modifier = Modifier
+                .padding(start = 8.dp)
+                .background(Color(0xFF232222), RoundedCornerShape(6.dp))
+                .clickable { wifiViewModel.scanWifi() }
+                .padding(10.dp)
+        ) {
+            Text("↻", color = Color.Green)
+        }
     }
+
 }
 
 @Composable
-fun SmallIconButton(label: String, onClick: () -> Unit) {
+fun WifiInfoSection(selected: WifiNetwork?) {
+
+    var infoExpanded by remember { mutableStateOf(false) }
+
+    Spacer(Modifier.height(24.dp))
+
     Box(
         modifier = Modifier
-            .background(Color(0xFF232222), RoundedCornerShape(6.dp))
-            .clickable { onClick() }
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        contentAlignment = Alignment.Center
+            .fillMaxWidth()
+            .clickable { infoExpanded = !infoExpanded }
     ) {
         Text(
-            text = label,
+            text = "> Wifi Info",
             color = Color.Green,
-            fontSize = 16.sp,
-            fontFamily = autowide
+            fontFamily = FontFamily.Monospace
         )
     }
-}
 
-
-@Composable
-fun WifiInfoSection() {
-    var expanded by remember { mutableStateOf(false) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFF121212), RoundedCornerShape(8.dp))
-            .padding(12.dp)
-    ) {
-
-
-        // Header clickable
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { expanded = !expanded },
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = if (expanded) "v Wifi Info" else "> Wifi Info",
-                color = Color.Green,
-                fontFamily = autowide,
-                fontSize = 14.sp
-            )
-        }
-
-        if (expanded) {
-            Spacer(Modifier.height(12.dp))
-
-            Text("SSID: ESP32_AP", color = Color.White, fontSize = 12.sp)
-            Text("RSSI: -62 dBm", color = Color.White, fontSize = 12.sp)
-            Text("Security: WPA2", color = Color.White, fontSize = 12.sp)
-            Text("Channel: 6", color = Color.White, fontSize = 12.sp)
+    if (infoExpanded && selected != null) {
+        AnimatedVisibility(visible = true) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp)
+                    .background(Color(0xFF121212), RoundedCornerShape(6.dp))
+            ) {
+                Text("SSID: ${selected.ssid}", color = Color.White)
+                Text("BSSID: ${selected.bssid}", color = Color.White)
+                Text("RSSI: ${selected.level} dBm", color = Color.White)
+                Text("Frequency: ${selected.frequency} MHz", color = Color.White)
+            }
         }
     }
 }
+
 
 @Composable
 fun ActionsRow(navController: NavController) {

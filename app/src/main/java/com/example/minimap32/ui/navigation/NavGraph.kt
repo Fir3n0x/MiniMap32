@@ -15,6 +15,7 @@ import com.example.minimap32.ui.screens.ble.ConnectingScreen
 import com.example.minimap32.ui.screens.ble.DeviceScreen
 import com.example.minimap32.ui.screens.LoginScreen
 import com.example.minimap32.viewmodel.BleViewModel
+import com.example.minimap32.viewmodel.WifiViewModel
 
 @SuppressLint("MissingPermission")
 @Composable
@@ -23,6 +24,7 @@ fun AppNavigation() {
 
     // ViewModel state to share with screens
     val bleViewModel: BleViewModel = viewModel()
+    val wifiViewModel: WifiViewModel = viewModel()
 
     // Track previous route to avoid unnecessary resets
     val previousRoute = remember { mutableStateOf<String?>(null) }
@@ -71,7 +73,8 @@ fun AppNavigation() {
         composable("connected") {
             ConnectedScreen(
                 navController = navController,
-                viewModel = bleViewModel
+                bleViewModel = bleViewModel,
+                wifiViewModel = wifiViewModel
             )
         }
         composable("connecting") {

@@ -1,0 +1,8 @@
+package com.example.minimap32.model
+
+data class WifiNetwork(
+    val ssid: String,
+    val bssid: String,
+    val level: Int,
+    val frequency: Int
+)
