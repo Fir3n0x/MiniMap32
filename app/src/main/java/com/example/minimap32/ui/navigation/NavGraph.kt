@@ -14,6 +14,9 @@ import com.example.minimap32.ui.screens.wifi.ConnectedScreen
 import com.example.minimap32.ui.screens.ble.ConnectingScreen
 import com.example.minimap32.ui.screens.ble.DeviceScreen
 import com.example.minimap32.ui.screens.LoginScreen
+import com.example.minimap32.ui.screens.wifi.BFSScreen
+import com.example.minimap32.ui.screens.wifi.DeauthScreen
+import com.example.minimap32.ui.screens.wifi.SnifferScreen
 import com.example.minimap32.viewmodel.BleViewModel
 import com.example.minimap32.viewmodel.WifiViewModel
 
@@ -70,6 +73,12 @@ fun AppNavigation() {
                 viewModel = bleViewModel
             )
         }
+        composable("connecting") {
+            ConnectingScreen(
+                navController = navController,
+                viewModel = bleViewModel
+            )
+        }
         composable("connected") {
             ConnectedScreen(
                 navController = navController,
@@ -77,10 +86,25 @@ fun AppNavigation() {
                 wifiViewModel = wifiViewModel
             )
         }
-        composable("connecting") {
-            ConnectingScreen(
+        composable("sniffer") {
+            SnifferScreen(
                 navController = navController,
-                viewModel = bleViewModel
+                bleViewModel = bleViewModel,
+                wifiViewModel = wifiViewModel
+            )
+        }
+        composable("deauth") {
+            DeauthScreen(
+                navController = navController,
+                bleViewModel = bleViewModel,
+                wifiViewModel = wifiViewModel
+            )
+        }
+        composable("beacon") {
+            BFSScreen(
+                navController = navController,
+                bleViewModel = bleViewModel,
+                wifiViewModel = wifiViewModel
             )
         }
     }

@@ -6,6 +6,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
@@ -60,6 +63,11 @@ fun ConnectedScreen(navController: NavController, bleViewModel: BleViewModel, wi
         navController.navigate("login") {
             popUpTo(0) // Empty the stack
         }
+    }
+
+    // Launch wifi scan when the page is displaying
+    LaunchedEffect(Unit) {
+        wifiViewModel.scanWifi()
     }
 
     LaunchedEffect(state) {
@@ -185,7 +193,7 @@ fun ConnectedScreen(navController: NavController, bleViewModel: BleViewModel, wi
 
             Spacer(Modifier.height(16.dp))
 
-            ActionsRow(navController)
+            ActionsRow(navController, selected)
         }
     }
 }
@@ -200,17 +208,13 @@ fun TargetNetworkRow(
     var selectedNetwork by remember { mutableStateOf<String?>(null) }
     val isScanning by wifiViewModel.isScanning.collectAsState()
 
+    // Observe refresh button
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
     LaunchedEffect(selected) {
         if (selected == null) {
             expanded = false
-        }
-    }
-
-    // Effect triggered when expanded change
-    LaunchedEffect(expanded) {
-        if (expanded) {
-            // When opening menu
-            wifiViewModel.scanWifi()
         }
     }
 
@@ -283,6 +287,20 @@ fun TargetNetworkRow(
             Text("X", color = Color.Red)
         }
 
+        // Refresh button
+        Box(
+            modifier = Modifier
+                .padding(start = 8.dp)
+                .background(if (isPressed) Color(0xFF3A3A3A) else Color(0xFF232222), RoundedCornerShape(6.dp))
+                .clickable (
+                    interactionSource = interactionSource,
+                    indication = null
+                ){ wifiViewModel.scanWifi() }
+                .padding(10.dp)
+        ) {
+            Text("↻", color = if(isPressed) Color.Yellow else Color.Green)
+        }
+
     }
 
 }
@@ -325,22 +343,23 @@ fun WifiInfoSection(selected: WifiNetwork?) {
 
 
 @Composable
-fun ActionsRow(navController: NavController) {
+fun ActionsRow(navController: NavController, selected: WifiNetwork?) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
+        if(selected != null) {
+            ActionButton("Sniffer") {
+                navController.navigate("sniffer")
+            }
 
-        ActionButton("Sniffer") {
-            navController.navigate("sniffer")
-        }
+            ActionButton("Deauth") {
+                navController.navigate("deauth")
+            }
 
-        ActionButton("Deauth") {
-            navController.navigate("deauth")
-        }
-
-        ActionButton("Beacon") {
-            navController.navigate("beacon")
+            ActionButton("Beacon") {
+                navController.navigate("beacon")
+            }
         }
     }
 }

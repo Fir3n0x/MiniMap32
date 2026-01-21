@@ -69,7 +69,7 @@ fun ConnectingScreen(navController: NavController, viewModel: BleViewModel) {
                 val errorMsg = (state as BleConnectionState.Error)
 
                 // Wait before coming back to login page
-                delay(6000)
+                delay(8_000)
 
                 // Navigate back to login WITHOUT calling resetSession here
                 // (it will be handled by AppNavigation if needed)
