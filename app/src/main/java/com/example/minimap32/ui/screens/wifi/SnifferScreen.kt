@@ -1,6 +1,8 @@
 package com.example.minimap32.ui.screens.wifi
 
+import android.Manifest
 import android.annotation.SuppressLint
+import androidx.annotation.RequiresPermission
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -36,6 +38,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.minimap32.autowide
+import com.example.minimap32.model.Command
+import com.example.minimap32.model.WifiNetwork
 import com.example.minimap32.viewmodel.BleViewModel
 import com.example.minimap32.viewmodel.WifiViewModel
 
@@ -257,9 +261,13 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
                         .clickable(enabled = safetyCheckbox) {
                             isAttackRunning = !isAttackRunning
                             if (isAttackRunning) {
+                                // START ATTACK
                                 attackLogs = attackLogs + "Attack started on ${selectedNetwork?.ssid}"
+                                launchSnifferAttack(bleViewModel, selectedNetwork)
                             } else {
+                                // STOP ATTACK
                                 attackLogs = attackLogs + "Attack stopped"
+                                stopSnifferAttack(bleViewModel)
                             }
                         }
                         .padding(horizontal = 32.dp, vertical = 16.dp)
@@ -306,4 +314,24 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
             }
         }
     }
+}
+
+@RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+fun launchSnifferAttack(bleViewModel: BleViewModel, selectedNetwork: WifiNetwork?) {
+    if(selectedNetwork == null) return
+
+    bleViewModel.bleManager.sendCommand(
+        Command.SendSniffStart(
+            ssid = selectedNetwork.ssid,
+            bssid = selectedNetwork.bssid,
+            channel = selectedNetwork.channel
+        )
+    )
+}
+
+@RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+fun stopSnifferAttack(bleViewModel: BleViewModel) {
+    bleViewModel.bleManager.sendCommand(
+        Command.SendSniffStop
+    )
 }

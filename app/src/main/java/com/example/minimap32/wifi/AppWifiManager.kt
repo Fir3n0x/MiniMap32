@@ -35,7 +35,8 @@ class AppWifiManager(
                         ssid = it.SSID,
                         bssid = it.BSSID,
                         level = it.level,
-                        frequency = it.frequency
+                        frequency = it.frequency,
+                        channel = frequencyToChannel(it.frequency)
                     )
                 }
             } else {
@@ -63,6 +64,16 @@ class AppWifiManager(
         try {
             context.unregisterReceiver(receiver)
         } catch(_: Exception) {}
+    }
+
+    // Retrieve network's frequency
+    fun frequencyToChannel(freq: Int): Int {
+        return when {
+            freq in 2412..2484 -> (freq - 2407) / 5
+            freq in 5170..5895 -> (freq - 5000) / 5
+            freq in 5955..7115 -> (freq - 5950) / 5 // 6 GHz
+            else -> -1 // unknown
+        }
     }
 
 }

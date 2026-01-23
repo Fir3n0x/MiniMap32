@@ -1,6 +1,8 @@
 package com.example.minimap32.ui.screens.wifi
 
+import android.Manifest
 import android.annotation.SuppressLint
+import androidx.annotation.RequiresPermission
 import androidx.benchmark.traceprocessor.Row
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
@@ -43,6 +45,7 @@ import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.minimap32.autowide
+import com.example.minimap32.model.Command
 import com.example.minimap32.model.WifiNetwork
 
 
@@ -371,4 +374,23 @@ fun DisplayTargetedNetwork(
             fontSize = 14.sp
         )
     }
+}
+
+@RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+fun launchDeauthAttack(bleViewModel: BleViewModel, selectedNetwork: WifiNetwork?) {
+    if(selectedNetwork == null) return
+
+//    bleViewModel.bleManager.sendCommand(
+//        Command.SniffStart(
+//            bssid = selectedNetwork.bssid,
+//            channel = selectedNetwork.channel
+//        )
+//    )
+}
+
+@RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+fun stopDeauthAttack(bleViewModel: BleViewModel) {
+    bleViewModel.bleManager.sendCommand(
+        Command.SniffStop
+    )
 }

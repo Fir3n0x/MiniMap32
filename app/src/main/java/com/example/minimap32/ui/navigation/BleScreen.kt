@@ -50,9 +50,9 @@ fun BleScreen() {
                 .padding(bottom = 8.dp)
         )
 
-        Button(onClick = { bleManager.sendCommand(cmdQuery) }) {
-            Text("Send CMD")
-        }
+//        Button(onClick = { bleManager.sendCommand(cmdQuery) }) {
+//            Text("Send CMD")
+//        }
 
         Button(onClick = { bleManager.clearMacDisplayed() }) {
             Text("Remove current MACs")

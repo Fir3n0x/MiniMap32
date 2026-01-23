@@ -12,6 +12,7 @@ import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.core.app.ActivityCompat
 import com.example.minimap32.model.BleDevice
+import com.example.minimap32.model.Command
 import com.example.minimap32.model.MAC
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -182,7 +183,7 @@ class BleManager(
                     connectionEvents.value = BleConnectionState.Connected
 
                     Log.d("BLE", "[I] Connected, requesting MTU...")
-                    gatt.requestMtu(64)
+                    gatt.requestMtu(128)
                     Log.d("BLE", "[I] Connected, discovering services...")
 
                     isConnected = true
@@ -342,7 +343,7 @@ class BleManager(
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-    fun sendCommand(cmd: String) {
+    private fun sendCommand(cmd: String) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (!hasPermission(Manifest.permission.BLUETOOTH_CONNECT)) {
                 Log.e("BLE", "[W] Permission BLUETOOTH_CONNECT missing!")
@@ -383,6 +384,11 @@ class BleManager(
         }
 
         Log.d("BLE", "[I] CMD sent: $cmd")
+    }
+
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+    fun sendCommand(cmd: Command) {
+        sendCommand(cmd.toPayload())
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)

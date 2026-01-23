@@ -336,6 +336,7 @@ fun WifiInfoSection(selected: WifiNetwork?) {
                 Text("BSSID: ${selected.bssid}", color = Color.White)
                 Text("RSSI: ${selected.level} dBm", color = Color.White)
                 Text("Frequency: ${selected.frequency} MHz", color = Color.White)
+                Text("Channel: ${selected.channel}", color = Color.White)
             }
         }
     }

@@ -4,5 +4,6 @@ data class WifiNetwork(
     val ssid: String,
     val bssid: String,
     val level: Int,
-    val frequency: Int
+    val frequency: Int,
+    val channel: Int
 )
