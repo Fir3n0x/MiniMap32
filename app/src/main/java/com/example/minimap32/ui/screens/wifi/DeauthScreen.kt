@@ -390,7 +390,7 @@ fun launchDeauthAttack(bleViewModel: BleViewModel, selectedNetwork: WifiNetwork?
 
 @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
 fun stopDeauthAttack(bleViewModel: BleViewModel) {
-    bleViewModel.bleManager.sendCommand(
-        Command.SniffStop
-    )
+//    bleViewModel.bleManager.sendCommand(
+//        Command.SniffStop
+//    )
 }

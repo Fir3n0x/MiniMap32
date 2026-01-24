@@ -264,7 +264,7 @@ fun TargetNetworkRow(
                     else -> {
                         networks.forEach { net ->
                             DropdownMenuItem(
-                                text = { Text(net.ssid.ifBlank { "<hidden>" }) },
+                                text = { Text(net.ssid.ifBlank { "<hidden>" } + " (${net.frequency} MHz)") },
                                 onClick = {
                                     wifiViewModel.selectNetwork(net)
                                     expanded = false
@@ -308,7 +308,7 @@ fun TargetNetworkRow(
 @Composable
 fun WifiInfoSection(selected: WifiNetwork?) {
 
-    var infoExpanded by remember { mutableStateOf(false) }
+    var infoExpanded by remember { mutableStateOf(true) }
 
     Spacer(Modifier.height(24.dp))
 

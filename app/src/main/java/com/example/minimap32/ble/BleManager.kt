@@ -12,6 +12,7 @@ import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.core.app.ActivityCompat
 import com.example.minimap32.model.BleDevice
+import com.example.minimap32.model.BleEvent
 import com.example.minimap32.model.Command
 import com.example.minimap32.model.MAC
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,6 +48,14 @@ class BleManager(
     // Handle mac event
     private val _macEvents = MutableStateFlow<List<MAC>>(emptyList())
     val macEvents: StateFlow<List<MAC>> = _macEvents
+
+    // Handle attack logs
+    private val _attackLogs = MutableStateFlow<List<String>>(emptyList())
+    val attackLogs: StateFlow<List<String>> = _attackLogs.asStateFlow()
+
+    // Handle status (STARTED, STOPPED, ERROR, etc.)
+    private val _statusEvents = MutableStateFlow<String?>(null)
+    val statusEvents: StateFlow<String?> = _statusEvents.asStateFlow()
 
     // Handle Discovered BLE devices
     val devices = MutableStateFlow<List<BluetoothDevice>>(emptyList())
@@ -311,24 +320,40 @@ class BleManager(
         ) {
             if (characteristic.uuid != statusUUID) return
 
-            val msg = value.toString(Charsets.UTF_8)
-            Log.d("BLE", "[I] NOTIFY: $msg")
+            val raw = value.toString(Charsets.UTF_8)
+            Log.d("BLE", "[I] NOTIFY: $raw")
 
-            // Format: MAC,RSSI,CHANNEL
-            val parts = msg.split(",")
+            when (val event = parseBleMessage(raw)) {
 
-            if (parts.size != 3) return
+                is BleEvent.Log -> {
+                    _attackLogs.value += event.message
+                }
 
-            val event = MAC(
-                mac = parts[0],
-                rssi = parts[1].toIntOrNull() ?: return,
-                channel = parts[2].toIntOrNull() ?: return
-            )
+                is BleEvent.MacFound -> {
+                    val macEvent = MAC(
+                        mac = event.mac,
+                        rssi = event.rssi,
+                        channel = event.channel
+                    )
 
-            // Déduplication simple côté Android
-            _macEvents.value =
-                (_macEvents.value + event)
-                    .distinctBy { it.mac }
+                    _macEvents.value =
+                        (_macEvents.value + macEvent)
+                            .distinctBy { it.mac }
+                }
+
+                is BleEvent.Status -> {
+                    _statusEvents.value = event.value
+                }
+
+                is BleEvent.Error -> {
+                    _attackLogs.value += "[ERROR] ${event.message}"
+                }
+
+                is BleEvent.Unknown -> {
+                    _attackLogs.value += "[RAW] ${event.raw}"
+                }
+            }
+
         }
 
         // Deprecated but still called on older devices
@@ -420,10 +445,49 @@ class BleManager(
         _macEvents.value = emptyList()
     }
 
+    fun pushLocalLog(msg: String) {
+        _attackLogs.value += msg
+    }
+
+    fun clearAttackLogs() {
+        _attackLogs.value = emptyList()
+    }
+
     private fun hasPermission(permission: String): Boolean {
         return ActivityCompat.checkSelfPermission(
             context,
             permission
         ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    // Parse received command
+    private fun parseBleMessage(raw: String): BleEvent {
+        val parts = raw.trim().split("|")
+        if (parts.isEmpty()) return BleEvent.Unknown(raw)
+
+        val type = parts[0]
+        val kv = parts.drop(1)
+            .mapNotNull {
+                val idx = it.indexOf("=")
+                if (idx == -1) null else it.substring(0, idx) to it.substring(idx + 1)
+            }
+            .toMap()
+
+        return when (type) {
+            "LOG" -> BleEvent.Log(kv["msg"] ?: raw)
+
+            "MAC" -> {
+                val mac = kv["mac"] ?: return BleEvent.Unknown(raw)
+                val rssi = kv["rssi"]?.toIntOrNull() ?: return BleEvent.Unknown(raw)
+                val ch = kv["ch"]?.toIntOrNull() ?: return BleEvent.Unknown(raw)
+                BleEvent.MacFound(mac, rssi, ch)
+            }
+
+            "STATUS" -> BleEvent.Status(kv["value"] ?: raw)
+
+            "ERROR" -> BleEvent.Error(kv["msg"] ?: raw)
+
+            else -> BleEvent.Unknown(raw)
+        }
     }
 }

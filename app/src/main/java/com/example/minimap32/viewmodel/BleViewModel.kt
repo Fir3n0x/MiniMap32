@@ -19,6 +19,8 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     // BleManager
     val bleManager = BleManager(application)
     val macEvents = bleManager.macEvents
+    val attackLogs = bleManager.attackLogs
+    val statusEvents = bleManager.statusEvents
 
     // BleConnection State
     private val _connectionState = MutableStateFlow<BleConnectionState>(BleConnectionState.Idle)
@@ -75,6 +77,14 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
                 _connectionState.value = BleConnectionState.Error("Connection timeout")
             }
         }
+    }
+
+    fun logLocal(msg: String) {
+        bleManager.pushLocalLog(msg)
+    }
+
+    fun clearLogs() {
+        bleManager.clearAttackLogs()
     }
 
     fun clearSelection() {

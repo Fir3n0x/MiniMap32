@@ -3,6 +3,7 @@ package com.example.minimap32.ui.screens.wifi
 import android.Manifest
 import android.annotation.SuppressLint
 import androidx.annotation.RequiresPermission
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,10 +21,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +46,9 @@ import com.example.minimap32.model.Command
 import com.example.minimap32.model.WifiNetwork
 import com.example.minimap32.viewmodel.BleViewModel
 import com.example.minimap32.viewmodel.WifiViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @SuppressLint("MissingPermission")
 @Composable
@@ -51,10 +58,65 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
     val selectedNetwork by wifiViewModel.selectedNetwork.collectAsState()
 
     // Deauth state
-    var attackLogs by remember { mutableStateOf(listOf<String>()) }
-    var detectedMacs by remember { mutableStateOf(listOf<Pair<String, Int>>()) } // MAC & RSSI
+    val attackLogs by bleViewModel.attackLogs.collectAsState()
+    val macEvents by bleViewModel.macEvents.collectAsState()
+    val status by bleViewModel.statusEvents.collectAsState()
+
+    val detectedMacs = macEvents.map { it.mac to it.rssi }
+
     var isAttackRunning by remember { mutableStateOf(false) }
+
     var safetyCheckbox by remember { mutableStateOf(false) }
+
+    // Handle border changes when mac discovered
+    var highlightMacs by remember { mutableStateOf(false) }
+    var lastMacCount by remember { mutableStateOf(0) }
+    val borderColor by animateColorAsState(
+        targetValue = if (highlightMacs) Color(0xFF00FF00) else Color(0xFF1E2624),
+        label = "mac-border"
+    )
+
+    // List state
+    val listState = rememberLazyListState()
+    var autoScrollEnabled by remember { mutableStateOf(true) }
+
+    // Disable auto-scroll while user is scrolling
+    var resumeJob by remember { mutableStateOf<Job?>(null) }
+
+    // Detect when user scrolls
+    LaunchedEffect(listState.isScrollInProgress) {
+        if (listState.isScrollInProgress) {
+            autoScrollEnabled = false
+
+            // Cancel any pending resume
+            resumeJob?.cancel()
+        } else {
+            // User released scroll → resume auto-scroll after 5s
+            resumeJob?.cancel()
+            resumeJob = launch {
+                delay(5_000) // 5 seconds
+                autoScrollEnabled = true
+            }
+        }
+    }
+
+    // Auto-scroll on new logs
+    LaunchedEffect(attackLogs.size) {
+        if (autoScrollEnabled && attackLogs.isNotEmpty()) {
+            listState.animateScrollToItem(attackLogs.lastIndex)
+        }
+    }
+
+    // MAC count
+    LaunchedEffect(macEvents.size) {
+        if (macEvents.size > lastMacCount) {
+            highlightMacs = true
+            delay(1_000) // 1 seconde
+            highlightMacs = false
+        }
+        lastMacCount = macEvents.size
+    }
+
 
     // Content box
     Column(
@@ -129,113 +191,114 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
             Spacer(Modifier.height(24.dp))
 
             // Wifi Info collapsible
-            WifiInfoSection(selectedNetwork)
-
-            Spacer(Modifier.height(32.dp))
+//            WifiInfoSection(selectedNetwork)
+//
+//            Spacer(Modifier.height(32.dp))
 
             // Main content
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    .weight(1f)
             ) {
-                // LEFT COLUMN - Target MAC & Attack Logs
-                Column(
+                // DETECTED MAC
+                Text(
+                    text = "Detected MACs",
+                    color = Color.Green,
+                    fontFamily = autowide,
+                    fontSize = 12.sp
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                Box(
                     modifier = Modifier
-                        .weight(2f)
-                        .fillMaxHeight()
+                        .fillMaxWidth()
+                        .height(140.dp)
+                        .background(Color(0xFF1A1A1A), RoundedCornerShape(6.dp))
+                        .border(
+                            width = 2.dp,
+                            color = borderColor,
+                            shape = RoundedCornerShape(6.dp)
+                        )
+                        .padding(8.dp)
                 ) {
-                    // Attack Logs Terminal
-                    Text(
-                        text = "Attack Logs",
-                        color = Color.Green,
-                        fontFamily = autowide,
-                        fontSize = 12.sp
-                    )
-
-                    Spacer(Modifier.height(8.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                            .background(Color(0xFF0A0A0A), RoundedCornerShape(6.dp))
-                            .border(1.dp, Color(0xFF1E2624), RoundedCornerShape(6.dp))
-                            .padding(12.dp)
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        LazyColumn {
-                            items(attackLogs) { log ->
+                        if (detectedMacs.isEmpty()) {
+                            item {
                                 Text(
-                                    text = "> $log",
-                                    color = Color(0xFF00FF00),
+                                    text = "Sniff packet to get MAC",
+                                    color = Color.Gray,
                                     fontFamily = FontFamily.Monospace,
-                                    fontSize = 11.sp
+                                    fontSize = 14.sp,
+                                    modifier = Modifier.padding(12.dp)
                                 )
+                            }
+                        } else {
+                            items(detectedMacs) { (mac, rssi) ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color(0xFF0F0F0F), RoundedCornerShape(4.dp))
+                                        .padding(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = mac,
+                                        color = Color.White,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 12.sp,
+                                        modifier = Modifier.weight(1f)
+                                    )
+
+                                    Spacer(Modifier.width(8.dp))
+
+                                    Text(
+                                        text = "$rssi dBm",
+                                        color = Color(0xFF00FF00),
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 10.sp
+                                    )
+                                }
                             }
                         }
                     }
                 }
 
-                // RIGHT COLUMN - Detected MAC Addresses
-                Column(
+                Spacer(Modifier.height(16.dp))
+
+                // ATTACK LOGS
+                Text(
+                    text = "Attack Logs",
+                    color = Color.Green,
+                    fontFamily = autowide,
+                    fontSize = 12.sp
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                Box(
                     modifier = Modifier
+                        .fillMaxWidth()
                         .weight(1f)
-                        .fillMaxHeight()
+                        .background(Color(0xFF0A0A0A), RoundedCornerShape(6.dp))
+                        .border(1.dp, Color(0xFF1E2624), RoundedCornerShape(6.dp))
+                        .padding(12.dp)
                 ) {
-                    Text(
-                        text = "Detected MACs",
-                        color = Color.Green,
-                        fontFamily = autowide,
-                        fontSize = 12.sp
-                    )
-
-                    Spacer(Modifier.height(8.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight()
-                            .background(Color(0xFF1A1A1A), RoundedCornerShape(6.dp))
-                            .padding(8.dp)
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        LazyColumn(
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            if (detectedMacs.isEmpty()) {
-                                item {
-                                    Text(
-                                        text = "Sniff packet to get MAC",
-                                        color = Color.Gray,
-                                        fontFamily = FontFamily.Monospace,
-                                        fontSize = 14.sp,
-                                        modifier = Modifier.padding(12.dp)
-                                    )
-                                }
-                            } else {
-                                items(detectedMacs) { (mac, rssi) ->
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .background(Color(0xFF0F0F0F), RoundedCornerShape(4.dp))
-                                            .padding(8.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            text = mac,
-                                            color = Color.White,
-                                            fontFamily = FontFamily.Monospace,
-                                            fontSize = 10.sp
-                                        )
-                                        Text(
-                                            text = "$rssi dBm",
-                                            color = Color(0xFF00FF00),
-                                            fontFamily = FontFamily.Monospace,
-                                            fontSize = 10.sp
-                                        )
-                                    }
-                                }
-                            }
+                        items(attackLogs) { log ->
+                            Text(
+                                text = "> $log",
+//                                color = Color(0xFF00FF00),
+                                color = Color.White,
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 11.sp
+                            )
                         }
                     }
                 }
@@ -262,11 +325,11 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
                             isAttackRunning = !isAttackRunning
                             if (isAttackRunning) {
                                 // START ATTACK
-                                attackLogs = attackLogs + "Attack started on ${selectedNetwork?.ssid}"
+                                bleViewModel.logLocal("Attack started on ${selectedNetwork?.ssid}")
                                 launchSnifferAttack(bleViewModel, selectedNetwork)
                             } else {
                                 // STOP ATTACK
-                                attackLogs = attackLogs + "Attack stopped"
+                                bleViewModel.logLocal("Attack stopped")
                                 stopSnifferAttack(bleViewModel)
                             }
                         }
