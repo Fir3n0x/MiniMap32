@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import com.example.minimap32.autowide
 import com.example.minimap32.model.Command
 import com.example.minimap32.model.WifiNetwork
+import com.example.minimap32.model.displayName
 
 
 @SuppressLint("MissingPermission")
@@ -368,7 +369,7 @@ fun DisplayTargetedNetwork(
             .background(Color(0xFF121212), RoundedCornerShape(6.dp))
     ) {
         Text(
-            text = if(selected?.ssid != null) selected.ssid else "Unknown network",
+            text = if(selected?.ssid != null) selected.displayName() else "Unknown network",
             color = Color.White,
             fontFamily = autowide,
             fontSize = 14.sp

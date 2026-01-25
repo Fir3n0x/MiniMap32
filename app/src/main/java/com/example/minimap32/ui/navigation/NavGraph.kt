@@ -1,15 +1,25 @@
 package com.example.minimap32.ui.navigation
 
 import android.annotation.SuppressLint
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.minimap32.ble.BleConnectionState
 import com.example.minimap32.ui.screens.wifi.ConnectedScreen
 import com.example.minimap32.ui.screens.ble.ConnectingScreen
 import com.example.minimap32.ui.screens.ble.DeviceScreen
@@ -31,6 +41,38 @@ fun AppNavigation() {
 
     // Track previous route to avoid unnecessary resets
     val previousRoute = remember { mutableStateOf<String?>(null) }
+
+    // Handle snackbar
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Observe snackbar events
+    LaunchedEffect(Unit) {
+        bleViewModel.uiEvents.collect { message ->
+            snackbarHostState.showSnackbar(
+                message = message,
+                duration = SnackbarDuration.Short
+            )
+        }
+    }
+
+    // Handle ble shut down
+    val state by bleViewModel.connectionState.collectAsState()
+
+    LaunchedEffect(state) {
+        when (state) {
+            is BleConnectionState.Disconnected,
+            is BleConnectionState.Error -> {
+
+                bleViewModel.handleBleDisconnect()
+                wifiViewModel.resetAll()
+
+                navController.navigate("login") {
+                    popUpTo(0) { inclusive = true }
+                }
+            }
+            else -> {}
+        }
+    }
 
     // Disconnect from BLE only when manually going back to login
     DisposableEffect(navController) {
@@ -57,55 +99,60 @@ fun AppNavigation() {
         }
     }
 
-    NavHost(
-        navController = navController,
-        startDestination = "login"
-    ) {
-        composable("login") {
-            LoginScreen(
-                navController = navController,
-                viewModel = bleViewModel
-            )
-        }
-        composable("devices") {
-            DeviceScreen(
-                navController = navController,
-                viewModel = bleViewModel
-            )
-        }
-        composable("connecting") {
-            ConnectingScreen(
-                navController = navController,
-                viewModel = bleViewModel
-            )
-        }
-        composable("connected") {
-            ConnectedScreen(
-                navController = navController,
-                bleViewModel = bleViewModel,
-                wifiViewModel = wifiViewModel
-            )
-        }
-        composable("sniffer") {
-            SnifferScreen(
-                navController = navController,
-                bleViewModel = bleViewModel,
-                wifiViewModel = wifiViewModel
-            )
-        }
-        composable("deauth") {
-            DeauthScreen(
-                navController = navController,
-                bleViewModel = bleViewModel,
-                wifiViewModel = wifiViewModel
-            )
-        }
-        composable("beacon") {
-            BFSScreen(
-                navController = navController,
-                bleViewModel = bleViewModel,
-                wifiViewModel = wifiViewModel
-            )
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { padding ->
+        NavHost(
+            navController = navController,
+            startDestination = "login",
+            modifier = Modifier.padding(padding)
+        ) {
+            composable("login") {
+                LoginScreen(
+                    navController = navController,
+                    viewModel = bleViewModel
+                )
+            }
+            composable("devices") {
+                DeviceScreen(
+                    navController = navController,
+                    viewModel = bleViewModel
+                )
+            }
+            composable("connecting") {
+                ConnectingScreen(
+                    navController = navController,
+                    viewModel = bleViewModel
+                )
+            }
+            composable("connected") {
+                ConnectedScreen(
+                    navController = navController,
+                    bleViewModel = bleViewModel,
+                    wifiViewModel = wifiViewModel
+                )
+            }
+            composable("sniffer") {
+                SnifferScreen(
+                    navController = navController,
+                    bleViewModel = bleViewModel,
+                    wifiViewModel = wifiViewModel
+                )
+            }
+            composable("deauth") {
+                DeauthScreen(
+                    navController = navController,
+                    bleViewModel = bleViewModel,
+                    wifiViewModel = wifiViewModel
+                )
+            }
+            composable("beacon") {
+                BFSScreen(
+                    navController = navController,
+                    bleViewModel = bleViewModel,
+                    wifiViewModel = wifiViewModel
+                )
+            }
         }
     }
 }

@@ -57,4 +57,10 @@ class WifiViewModel(
         wifiManager.stop()
         super.onCleared()
     }
+
+    fun resetAll() {
+        _selectedNetwork.value = null
+        _networks.value = emptyList()
+    }
+
 }

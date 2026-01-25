@@ -7,3 +7,7 @@ data class WifiNetwork(
     val frequency: Int,
     val channel: Int
 )
+
+fun WifiNetwork.displayName(): String {
+    return "${ssid.ifBlank { "<hidden>" }} (${frequency} MHz)"
+}

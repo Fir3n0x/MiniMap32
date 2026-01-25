@@ -41,6 +41,7 @@ import androidx.navigation.NavController
 import com.example.minimap32.autowide
 import com.example.minimap32.ble.BleConnectionState
 import com.example.minimap32.model.WifiNetwork
+import com.example.minimap32.model.displayName
 import com.example.minimap32.viewmodel.BleViewModel
 import com.example.minimap32.viewmodel.WifiViewModel
 import kotlinx.coroutines.delay
@@ -68,29 +69,9 @@ fun ConnectedScreen(navController: NavController, bleViewModel: BleViewModel, wi
     // Launch wifi scan when the page is displaying
     LaunchedEffect(Unit) {
         wifiViewModel.scanWifi()
-    }
-
-    LaunchedEffect(state) {
-        when (state) {
-
-            is BleConnectionState.Disconnected,
-            is BleConnectionState.Error -> {
-
-                // Break UX
-                delay(1000)
-
-                // reset BLE
-                bleViewModel.bleManager.resetSession()
-                bleViewModel.clearSelection()
-
-                // navigation to login
-                navController.navigate("login") {
-                    popUpTo("connected") { inclusive = true }
-                }
-            }
-
-            else -> {}
-        }
+        // Stop attack
+        stopSnifferAttack(bleViewModel)
+        stopDeauthAttack(bleViewModel)
     }
 
     // Content box
@@ -235,7 +216,7 @@ fun TargetNetworkRow(
                 .padding(12.dp)
         ) {
             Text(
-                text = selected?.ssid ?: "Select a network",
+                text = selected?.displayName() ?: "Select a network",
                 color = Color.White,
                 fontFamily = autowide
             )
@@ -264,7 +245,7 @@ fun TargetNetworkRow(
                     else -> {
                         networks.forEach { net ->
                             DropdownMenuItem(
-                                text = { Text(net.ssid.ifBlank { "<hidden>" } + " (${net.frequency} MHz)") },
+                                text = { Text(net.displayName()) },
                                 onClick = {
                                     wifiViewModel.selectNetwork(net)
                                     expanded = false

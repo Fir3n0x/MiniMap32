@@ -449,7 +449,7 @@ class BleManager(
         _attackLogs.value += msg
     }
 
-    fun clearAttackLogs() {
+    fun clearSnifferLogs() {
         _attackLogs.value = emptyList()
     }
 

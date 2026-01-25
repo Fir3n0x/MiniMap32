@@ -49,4 +49,18 @@ sealed class Command {
             return "BEACON|START|SSID=$ssid|CHANNEL=$channel"
         }
     }
+
+    // MAC
+    object SendClearMac : Command() {
+        override fun toPayload(): String {
+            return "MAC|CLEAR"
+        }
+    }
+
+    // WIFI
+    object SendClearWifi : Command() {
+        override fun toPayload(): String {
+            return "WIFI|CLEAR"
+        }
+    }
 }

@@ -56,6 +56,8 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
 
     // WIFI Variables
     val selectedNetwork by wifiViewModel.selectedNetwork.collectAsState()
+    var lastNetwork by remember { mutableStateOf<WifiNetwork?>(null) }
+    var hasInitialized by remember { mutableStateOf(false) }
 
     // Deauth state
     val attackLogs by bleViewModel.attackLogs.collectAsState()
@@ -83,6 +85,12 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
     // Disable auto-scroll while user is scrolling
     var resumeJob by remember { mutableStateOf<Job?>(null) }
 
+    // When page is displayed
+    LaunchedEffect(Unit) {
+        isAttackRunning = false
+        safetyCheckbox = false
+    }
+
     // Detect when user scrolls
     LaunchedEffect(listState.isScrollInProgress) {
         if (listState.isScrollInProgress) {
@@ -103,7 +111,7 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
     // Auto-scroll on new logs
     LaunchedEffect(attackLogs.size) {
         if (autoScrollEnabled && attackLogs.isNotEmpty()) {
-            listState.animateScrollToItem(attackLogs.lastIndex)
+            listState.scrollToItem(attackLogs.lastIndex)
         }
     }
 
@@ -115,6 +123,26 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
             highlightMacs = false
         }
         lastMacCount = macEvents.size
+    }
+
+    // When selectedNetwork change
+    LaunchedEffect(selectedNetwork) {
+        if (!hasInitialized) {
+            hasInitialized = true
+            lastNetwork = selectedNetwork
+            return@LaunchedEffect
+        }
+
+        if(selectedNetwork != null && selectedNetwork != lastNetwork) {
+            delay(500)
+            bleViewModel.notifyEsp32ClearMacs()
+            bleViewModel.notifyEsp32ResetWifiVariables()
+            delay(500)
+            bleViewModel.clearMacEvents()
+            bleViewModel.clearSnifferLogs()
+
+            lastNetwork = selectedNetwork
+        }
     }
 
 
@@ -202,12 +230,32 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
                     .weight(1f)
             ) {
                 // DETECTED MAC
-                Text(
-                    text = "Detected MACs",
-                    color = Color.Green,
-                    fontFamily = autowide,
-                    fontSize = 12.sp
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Detected MACs" + " (${detectedMacs.size})",
+                        color = Color.Green,
+                        fontFamily = autowide,
+                        fontSize = 12.sp
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .background(Color(0xFFCC0000), RoundedCornerShape(4.dp))
+                            .clickable {
+                                // Cleaning action
+                                bleViewModel.clearMacEvents()
+                                bleViewModel.notifyEsp32ClearMacs()
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("X", color = Color.White, fontSize = 14.sp)
+                    }
+                }
 
                 Spacer(Modifier.height(8.dp))
 
@@ -270,19 +318,39 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
                 Spacer(Modifier.height(16.dp))
 
                 // ATTACK LOGS
-                Text(
-                    text = "Attack Logs",
-                    color = Color.Green,
-                    fontFamily = autowide,
-                    fontSize = 12.sp
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Attack Logs",
+                        color = Color.Green,
+                        fontFamily = autowide,
+                        fontSize = 12.sp
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .background(Color(0xFFCC0000), RoundedCornerShape(4.dp))
+                            .clickable {
+                                // Cleaning action
+                                bleViewModel.clearSnifferLogs()
+                                bleViewModel.notifyEsp32ResetWifiVariables()
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("X", color = Color.White, fontSize = 14.sp)
+                    }
+                }
 
                 Spacer(Modifier.height(8.dp))
 
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f)
+                        .height(200.dp)
                         .background(Color(0xFF0A0A0A), RoundedCornerShape(6.dp))
                         .border(1.dp, Color(0xFF1E2624), RoundedCornerShape(6.dp))
                         .padding(12.dp)
