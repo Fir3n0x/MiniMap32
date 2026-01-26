@@ -49,9 +49,13 @@ class BleManager(
     private val _macEvents = MutableStateFlow<List<MAC>>(emptyList())
     val macEvents: StateFlow<List<MAC>> = _macEvents
 
-    // Handle attack logs
-    private val _attackLogs = MutableStateFlow<List<String>>(emptyList())
-    val attackLogs: StateFlow<List<String>> = _attackLogs.asStateFlow()
+    // Handle attack logs sniffer
+    private val _attackLogsSniffer = MutableStateFlow<List<String>>(emptyList())
+    val attackLogsSniffer: StateFlow<List<String>> = _attackLogsSniffer.asStateFlow()
+
+    // Handle attack logs deauth
+    private val _attackLogsDeauth = MutableStateFlow<List<String>>(emptyList())
+    val attackLogsDeauth: StateFlow<List<String>> = _attackLogsDeauth.asStateFlow()
 
     // Handle status (STARTED, STOPPED, ERROR, etc.)
     private val _statusEvents = MutableStateFlow<String?>(null)
@@ -149,10 +153,7 @@ class BleManager(
 
         // Small delay to let the BLE stack reset
         android.os.Handler(android.os.Looper.getMainLooper())
-            .postDelayed(
-                @androidx.annotation.RequiresPermission(
-                    android.Manifest.permission.BLUETOOTH_CONNECT
-                ) {
+            .postDelayed({
                     Log.d("BLE", "[I] Connecting to device...")
 
                     // Try connection with autoConnect = true for more stable connection
@@ -163,7 +164,7 @@ class BleManager(
                         BluetoothDevice.TRANSPORT_LE
                     )
                 }, 500
-            )  // Increased delay to 500ms
+            )  // Delay
     }
 
     private val gattCallback = object : BluetoothGattCallback() {
@@ -326,33 +327,46 @@ class BleManager(
             when (val event = parseBleMessage(raw)) {
 
                 is BleEvent.Log -> {
-                    _attackLogs.value += event.message
+                    when (event.subtype) {
+                        "SNIFF" -> _attackLogsSniffer.value += event.message
+                        "DEAUTH" -> _attackLogsDeauth.value += event.message
+//                        else -> {
+//                            _attackLogsSniffer.value += "[${event.subtype}] ${event.message}"
+//                        }
+                    }
                 }
 
                 is BleEvent.MacFound -> {
-                    val macEvent = MAC(
-                        mac = event.mac,
-                        rssi = event.rssi,
-                        channel = event.channel
-                    )
+                    if (event.subtype == "SNIFF") {
+                        val macEvent = MAC(
+                            mac = event.mac,
+                            rssi = event.rssi,
+                            channel = event.channel
+                        )
 
-                    _macEvents.value =
-                        (_macEvents.value + macEvent)
-                            .distinctBy { it.mac }
+                        _macEvents.value =
+                            (_macEvents.value + macEvent)
+                                .distinctBy { it.mac }
+                    }
                 }
 
                 is BleEvent.Status -> {
-                    _statusEvents.value = event.value
+                    _statusEvents.value = "${event.subtype}:${event.value}"
                 }
 
                 is BleEvent.Error -> {
-                    _attackLogs.value += "[ERROR] ${event.message}"
+                    when (event.subtype) {
+                        "SNIFF" -> _attackLogsSniffer.value += "[ERROR] ${event.message}"
+                        "DEAUTH" -> _attackLogsDeauth.value += "[ERROR] ${event.message}"
+//                        else -> _attackLogsSniffer.value += "[ERROR:${event.subtype}] ${event.message}"
+                    }
                 }
 
                 is BleEvent.Unknown -> {
-                    _attackLogs.value += "[RAW] ${event.raw}"
+//                    _attackLogsSniffer.value += "[RAW] ${event.raw}"
                 }
             }
+
 
         }
 
@@ -445,12 +459,20 @@ class BleManager(
         _macEvents.value = emptyList()
     }
 
-    fun pushLocalLog(msg: String) {
-        _attackLogs.value += msg
+    fun pushLocalLogSniffer(msg: String) {
+        _attackLogsSniffer.value += msg
+    }
+
+    fun pushLocalLogDeauth(msg: String) {
+        _attackLogsDeauth.value += msg
     }
 
     fun clearSnifferLogs() {
-        _attackLogs.value = emptyList()
+        _attackLogsSniffer.value = emptyList()
+    }
+
+    fun clearSnifferDeauth() {
+        _attackLogsDeauth.value = emptyList()
     }
 
     private fun hasPermission(permission: String): Boolean {
@@ -463,31 +485,50 @@ class BleManager(
     // Parse received command
     private fun parseBleMessage(raw: String): BleEvent {
         val parts = raw.trim().split("|")
-        if (parts.isEmpty()) return BleEvent.Unknown(raw)
+        if (parts.size < 2) return BleEvent.Unknown(raw)
 
         val type = parts[0]
-        val kv = parts.drop(1)
+        val subtype = parts[1]
+
+        val kv = parts.drop(2)
             .mapNotNull {
                 val idx = it.indexOf("=")
-                if (idx == -1) null else it.substring(0, idx) to it.substring(idx + 1)
+                if (idx == -1) null
+                else it.substring(0, idx) to it.substring(idx + 1)
             }
             .toMap()
 
         return when (type) {
-            "LOG" -> BleEvent.Log(kv["msg"] ?: raw)
+            "LOG" -> BleEvent.Log(
+                subtype = subtype,
+                message = kv["msg"] ?: raw
+            )
 
             "MAC" -> {
                 val mac = kv["mac"] ?: return BleEvent.Unknown(raw)
                 val rssi = kv["rssi"]?.toIntOrNull() ?: return BleEvent.Unknown(raw)
                 val ch = kv["ch"]?.toIntOrNull() ?: return BleEvent.Unknown(raw)
-                BleEvent.MacFound(mac, rssi, ch)
+
+                BleEvent.MacFound(
+                    subtype = subtype,
+                    mac = mac,
+                    rssi = rssi,
+                    channel = ch
+                )
             }
 
-            "STATUS" -> BleEvent.Status(kv["value"] ?: raw)
+            "STATUS" -> BleEvent.Status(
+                subtype = subtype,
+                value = kv["value"] ?: raw
+            )
 
-            "ERROR" -> BleEvent.Error(kv["msg"] ?: raw)
+            "ERROR" -> BleEvent.Error(
+                subtype = subtype,
+                message = kv["msg"] ?: raw
+            )
 
             else -> BleEvent.Unknown(raw)
         }
     }
+
 }

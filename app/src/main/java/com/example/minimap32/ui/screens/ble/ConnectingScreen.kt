@@ -16,6 +16,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -35,7 +36,7 @@ import kotlinx.coroutines.delay
 fun ConnectingScreen(navController: NavController, viewModel: BleViewModel) {
 
     val state by viewModel.connectionState.collectAsState()
-    var hasNavigated by rememberSaveable { mutableStateOf(false) }
+    var hasNavigated by remember { mutableStateOf(false) }
 
     fun statusFor(step: BleConnectionState): LineStatus =
         when {

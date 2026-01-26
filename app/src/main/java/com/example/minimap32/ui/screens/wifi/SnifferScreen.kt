@@ -59,8 +59,8 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
     var lastNetwork by remember { mutableStateOf<WifiNetwork?>(null) }
     var hasInitialized by remember { mutableStateOf(false) }
 
-    // Deauth state
-    val attackLogs by bleViewModel.attackLogs.collectAsState()
+    // Attack state
+    val attackLogs by bleViewModel.attackLogsSniffer.collectAsState()
     val macEvents by bleViewModel.macEvents.collectAsState()
     val status by bleViewModel.statusEvents.collectAsState()
 
@@ -217,11 +217,6 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
             DisplayTargetedNetwork(selectedNetwork)
 
             Spacer(Modifier.height(24.dp))
-
-            // Wifi Info collapsible
-//            WifiInfoSection(selectedNetwork)
-//
-//            Spacer(Modifier.height(32.dp))
 
             // Main content
             Column(
@@ -393,11 +388,11 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
                             isAttackRunning = !isAttackRunning
                             if (isAttackRunning) {
                                 // START ATTACK
-                                bleViewModel.logLocal("Attack started on ${selectedNetwork?.ssid}")
+                                bleViewModel.logLocalSniffer("Attack started on ${selectedNetwork?.ssid}")
                                 launchSnifferAttack(bleViewModel, selectedNetwork)
                             } else {
                                 // STOP ATTACK
-                                bleViewModel.logLocal("Attack stopped")
+                                bleViewModel.logLocalSniffer("Attack stopped")
                                 stopSnifferAttack(bleViewModel)
                             }
                         }

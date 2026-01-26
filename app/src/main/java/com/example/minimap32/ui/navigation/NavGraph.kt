@@ -1,6 +1,7 @@
 package com.example.minimap32.ui.navigation
 
 import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -60,8 +61,8 @@ fun AppNavigation() {
 
     LaunchedEffect(state) {
         when (state) {
-            is BleConnectionState.Disconnected,
             is BleConnectionState.Error -> {
+                Log.e("BLE", "Error state detected: $state")
 
                 bleViewModel.handleBleDisconnect()
                 wifiViewModel.resetAll()
@@ -70,6 +71,24 @@ fun AppNavigation() {
                     popUpTo(0) { inclusive = true }
                 }
             }
+
+            is BleConnectionState.Disconnected -> {
+                val currentRoute = navController.currentDestination?.route
+
+                // Only handle if we're NOT already on login/connecting
+                // AND we haven't already handled an error
+                if (currentRoute !in listOf("login", "connecting", "devices")) {
+                    Log.w("BLE", "Unexpected disconnect from route: $currentRoute")
+
+                    bleViewModel.handleBleDisconnect()
+                    wifiViewModel.resetAll()
+
+                    navController.navigate("login") {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            }
+
             else -> {}
         }
     }

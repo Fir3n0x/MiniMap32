@@ -1,10 +1,34 @@
 package com.example.minimap32.model
 
-// Format TYPE|key=value|key=value|...
+// Format TYPE|SUBTYPE(SNIFF,DEAUTH,...)|key=value|key=value|...
 sealed class BleEvent {
-    data class Log(val message: String) : BleEvent()
-    data class MacFound(val mac: String, val rssi: Int, val channel: Int) : BleEvent()
-    data class Status(val value: String) : BleEvent()
-    data class Error(val message: String) : BleEvent()
-    data class Unknown(val raw: String) : BleEvent()
+    abstract val subtype: String?
+
+    data class Log(
+        override val subtype: String?,
+        val message: String
+    ) : BleEvent()
+
+    data class MacFound(
+        override val subtype: String?,
+        val mac: String,
+        val rssi: Int,
+        val channel: Int
+    ) : BleEvent()
+
+    data class Status(
+        override val subtype: String?,
+        val value: String
+    ) : BleEvent()
+
+    data class Error(
+        override val subtype: String?,
+        val message: String
+    ) : BleEvent()
+
+    data class Unknown(
+        val raw: String
+    ) : BleEvent() {
+        override val subtype: String? = null
+    }
 }

@@ -22,10 +22,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,6 +50,9 @@ import com.example.minimap32.autowide
 import com.example.minimap32.model.Command
 import com.example.minimap32.model.WifiNetwork
 import com.example.minimap32.model.displayName
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 
 @SuppressLint("MissingPermission")
@@ -59,10 +64,69 @@ fun DeauthScreen(navController: NavController, bleViewModel: BleViewModel, wifiV
 
     // Deauth state
     var targetMac by remember { mutableStateOf("") }
-    var attackLogs by remember { mutableStateOf(listOf<String>()) }
-    var detectedMacs by remember { mutableStateOf(listOf<Pair<String, Int>>()) } // MAC & RSSI
+    val attackLogs by bleViewModel.attackLogsDeauth.collectAsState()
     var isAttackRunning by remember { mutableStateOf(false) }
     var safetyCheckbox by remember { mutableStateOf(false) }
+
+    // Handle display information
+    var lastNetwork by remember { mutableStateOf<WifiNetwork?>(null) }
+    var hasInitialized by remember { mutableStateOf(false) }
+
+    // List state
+    val listState = rememberLazyListState()
+    var autoScrollEnabled by remember { mutableStateOf(true) }
+
+    // Disable auto-scroll while user is scrolling
+    var resumeJob by remember { mutableStateOf<Job?>(null) }
+
+    // When page is displayed
+    LaunchedEffect(Unit) {
+        isAttackRunning = false
+        safetyCheckbox = false
+    }
+
+    // Detect when user scrolls
+    LaunchedEffect(listState.isScrollInProgress) {
+        if (listState.isScrollInProgress) {
+            autoScrollEnabled = false
+
+            // Cancel any pending resume
+            resumeJob?.cancel()
+        } else {
+            // User released scroll → resume auto-scroll after 5s
+            resumeJob?.cancel()
+            resumeJob = launch {
+                delay(5_000) // 5 seconds
+                autoScrollEnabled = true
+            }
+        }
+    }
+
+    // Auto-scroll on new logs
+    LaunchedEffect(attackLogs.size) {
+        if (autoScrollEnabled && attackLogs.isNotEmpty()) {
+            listState.scrollToItem(attackLogs.lastIndex)
+        }
+    }
+
+    // When selectedNetwork change
+    LaunchedEffect(selectedNetwork) {
+        if (!hasInitialized) {
+            hasInitialized = true
+            lastNetwork = selectedNetwork
+            return@LaunchedEffect
+        }
+
+        if(selectedNetwork != null && selectedNetwork != lastNetwork) {
+            delay(500)
+            bleViewModel.notifyEsp32ClearMacs()
+
+            delay(500)
+            bleViewModel.clearMacEvents()
+            bleViewModel.clearDeauthLogs()
+            lastNetwork = selectedNetwork
+        }
+    }
 
     // Content box
     Column(
@@ -136,62 +200,56 @@ fun DeauthScreen(navController: NavController, bleViewModel: BleViewModel, wifiV
 
             Spacer(Modifier.height(24.dp))
 
-            // Wifi Info collapsible
-            WifiInfoSection(selectedNetwork)
-
-            Spacer(Modifier.height(32.dp))
-
             // Main content
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    .weight(1f)
             ) {
-                // LEFT COLUMN - Target MAC & Attack Logs
-                Column(
+
+                // MAC Address Input
+                Text(
+                    text = "Target MAC Address",
+                    color = Color.Green,
+                    fontFamily = autowide,
+                    fontSize = 12.sp
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                BasicTextField(
+                    value = targetMac,
+                    onValueChange = { targetMac = it },
                     modifier = Modifier
-                        .weight(2f)
-                        .fillMaxHeight()
-                ) {
-                    // MAC Address Input
-                    Text(
-                        text = "Target MAC Address",
-                        color = Color.Green,
-                        fontFamily = autowide,
-                        fontSize = 12.sp
-                    )
-
-                    Spacer(Modifier.height(8.dp))
-
-                    BasicTextField(
-                        value = targetMac,
-                        onValueChange = { targetMac = it },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Color(0xFF1A1A1A), RoundedCornerShape(6.dp))
-                            .padding(12.dp),
-                        textStyle = TextStyle(
-                            color = Color.White,
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 14.sp
-                        ),
-                        decorationBox = { innerTextField ->
-                            if (targetMac.isEmpty()) {
-                                Text(
-                                    "FF:FF:FF:FF:FF:FF",
-                                    color = Color.Gray,
-                                    fontFamily = FontFamily.Monospace,
-                                    fontSize = 14.sp
-                                )
-                            }
-                            innerTextField()
+                        .fillMaxWidth()
+                        .background(Color(0xFF1A1A1A), RoundedCornerShape(6.dp))
+                        .padding(12.dp),
+                    textStyle = TextStyle(
+                        color = Color.White,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 14.sp
+                    ),
+                    decorationBox = { innerTextField ->
+                        if (targetMac.isEmpty()) {
+                            Text(
+                                "FF:FF:FF:FF:FF:FF",
+                                color = Color.Gray,
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 14.sp
+                            )
                         }
-                    )
+                        innerTextField()
+                    }
+                )
 
-                    Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(16.dp))
 
-                    // Attack Logs Terminal
+                // ATTACK LOGS
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
                         text = "Attack Logs",
                         color = Color.Green,
@@ -199,89 +257,41 @@ fun DeauthScreen(navController: NavController, bleViewModel: BleViewModel, wifiV
                         fontSize = 12.sp
                     )
 
-                    Spacer(Modifier.height(8.dp))
-
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                            .background(Color(0xFF0A0A0A), RoundedCornerShape(6.dp))
-                            .border(1.dp, Color(0xFF1E2624), RoundedCornerShape(6.dp))
-                            .padding(12.dp)
+                            .size(24.dp)
+                            .background(Color(0xFFCC0000), RoundedCornerShape(4.dp))
+                            .clickable {
+                                // Cleaning action
+                                bleViewModel.clearDeauthLogs()
+                            },
+                        contentAlignment = Alignment.Center
                     ) {
-                        LazyColumn {
-                            items(attackLogs) { log ->
-                                Text(
-                                    text = "> $log",
-                                    color = Color(0xFF00FF00),
-                                    fontFamily = FontFamily.Monospace,
-                                    fontSize = 11.sp
-                                )
-                            }
-                        }
+                        Text("X", color = Color.White, fontSize = 14.sp)
                     }
                 }
 
-                // RIGHT COLUMN - Detected MAC Addresses
-                Column(
+                Spacer(Modifier.height(8.dp))
+
+                Box(
                     modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .background(Color(0xFF0A0A0A), RoundedCornerShape(6.dp))
+                        .border(1.dp, Color(0xFF1E2624), RoundedCornerShape(6.dp))
+                        .padding(12.dp)
                 ) {
-                    Text(
-                        text = "Detected MACs",
-                        color = Color.Green,
-                        fontFamily = autowide,
-                        fontSize = 12.sp
-                    )
-
-                    Spacer(Modifier.height(8.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight()
-                            .background(Color(0xFF1A1A1A), RoundedCornerShape(6.dp))
-                            .padding(8.dp)
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        LazyColumn(
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            if (detectedMacs.isEmpty()) {
-                                item {
-                                    Text(
-                                        text = "Sniff packet to get MAC",
-                                        color = Color.Gray,
-                                        fontFamily = FontFamily.Monospace,
-                                        fontSize = 14.sp,
-                                        modifier = Modifier.padding(12.dp)
-                                    )
-                                }
-                            } else {
-                                items(detectedMacs) { (mac, rssi) ->
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .background(Color(0xFF0F0F0F), RoundedCornerShape(4.dp))
-                                            .clickable { targetMac = mac }
-                                            .padding(8.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            text = mac,
-                                            color = Color.White,
-                                            fontFamily = FontFamily.Monospace,
-                                            fontSize = 10.sp
-                                        )
-                                        Text(
-                                            text = "$rssi dBm",
-                                            color = Color(0xFF00FF00),
-                                            fontFamily = FontFamily.Monospace,
-                                            fontSize = 10.sp
-                                        )
-                                    }
-                                }
-                            }
+                        items(attackLogs) { log ->
+                            Text(
+                                text = "> $log",
+                                color = Color.White,
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 11.sp
+                            )
                         }
                     }
                 }
@@ -307,9 +317,13 @@ fun DeauthScreen(navController: NavController, bleViewModel: BleViewModel, wifiV
                         .clickable(enabled = safetyCheckbox) {
                             isAttackRunning = !isAttackRunning
                             if (isAttackRunning) {
-                                attackLogs = attackLogs + "Attack started on $targetMac"
+                                // START ATTACK
+                                bleViewModel.logLocalDeauth("Attack started on ${selectedNetwork?.ssid}")
+                                launchDeauthAttack(bleViewModel, selectedNetwork, targetMac)
                             } else {
-                                attackLogs = attackLogs + "Attack stopped"
+                                // STOP ATTACK
+                                bleViewModel.logLocalDeauth("Attack stopped")
+                                stopDeauthAttack(bleViewModel)
                             }
                         }
                         .padding(horizontal = 32.dp, vertical = 16.dp)
@@ -358,40 +372,22 @@ fun DeauthScreen(navController: NavController, bleViewModel: BleViewModel, wifiV
     }
 }
 
-@Composable
-fun DisplayTargetedNetwork(
-    selected: WifiNetwork?
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(12.dp)
-            .background(Color(0xFF121212), RoundedCornerShape(6.dp))
-    ) {
-        Text(
-            text = if(selected?.ssid != null) selected.displayName() else "Unknown network",
-            color = Color.White,
-            fontFamily = autowide,
-            fontSize = 14.sp
-        )
-    }
-}
-
 @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-fun launchDeauthAttack(bleViewModel: BleViewModel, selectedNetwork: WifiNetwork?) {
+fun launchDeauthAttack(bleViewModel: BleViewModel, selectedNetwork: WifiNetwork?, targetMac: String) {
     if(selectedNetwork == null) return
 
-//    bleViewModel.bleManager.sendCommand(
-//        Command.SniffStart(
-//            bssid = selectedNetwork.bssid,
-//            channel = selectedNetwork.channel
-//        )
-//    )
+    bleViewModel.bleManager.sendCommand(
+        Command.SendStartDeauth(
+            targetMac = targetMac,
+            apMac = selectedNetwork.bssid,
+            channel = selectedNetwork.channel
+        )
+    )
 }
 
 @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
 fun stopDeauthAttack(bleViewModel: BleViewModel) {
-//    bleViewModel.bleManager.sendCommand(
-//        Command.SniffStop
-//    )
+    bleViewModel.bleManager.sendCommand(
+        Command.SendStopDeauth
+    )
 }

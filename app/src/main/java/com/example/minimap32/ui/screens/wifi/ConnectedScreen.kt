@@ -363,3 +363,23 @@ fun ActionButton(label: String, onClick: () -> Unit) {
     }
 }
 
+@Composable
+fun DisplayTargetedNetwork(
+    selected: WifiNetwork?
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(12.dp)
+            .background(Color(0xFF121212), RoundedCornerShape(6.dp))
+    ) {
+        Text(
+            text = if(selected?.ssid != null) selected.displayName() else "Unknown network",
+            color = Color.White,
+            fontFamily = autowide,
+            fontSize = 14.sp
+        )
+    }
+}
+
+

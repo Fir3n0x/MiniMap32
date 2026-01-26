@@ -23,7 +23,8 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     // BleManager
     val bleManager = BleManager(application)
     val macEvents = bleManager.macEvents
-    val attackLogs = bleManager.attackLogs
+    val attackLogsSniffer = bleManager.attackLogsSniffer
+    val attackLogsDeauth = bleManager.attackLogsDeauth
     val statusEvents = bleManager.statusEvents
 
     // BleConnection State
@@ -89,7 +90,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
 
         timeoutJob?.cancel()
         timeoutJob = viewModelScope.launch {
-            delay(6000) // 6 secondes
+            delay(15_000) // delay
             if (connectionState.value !is BleConnectionState.Ready) {
                 bleManager.resetSession()
                 _connectionState.value = BleConnectionState.Error("Connection timeout")
@@ -99,20 +100,31 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
 
     fun handleBleDisconnect() {
         viewModelScope.launch {
+            // Only send commands if we're still connected
+            val currentState = connectionState.value
 
-            // Stop ESP32 attacks
-            bleManager.sendCommand(Command.SendSniffStop)
-            bleManager.sendCommand(Command.SendStopDeauth)
+            if (currentState is BleConnectionState.Ready ||
+                currentState is BleConnectionState.Connected) {
 
-            delay(300)
+                try {
+                    // Stop ESP32 attacks
+                    bleManager.sendCommand(Command.SendSniffStop)
+                    bleManager.sendCommand(Command.SendStopDeauth)
 
-            // Reset ESP32 state
-            bleManager.sendCommand(Command.SendClearMac)
-            bleManager.sendCommand(Command.SendClearWifi)
+                    delay(300)
 
-            // Clear local state
+                    // Reset ESP32 state
+                    bleManager.sendCommand(Command.SendClearMac)
+                    bleManager.sendCommand(Command.SendClearWifi)
+                } catch (e: Exception) {
+                    Log.e("BLE", "Failed to send cleanup commands: ${e.message}")
+                }
+            }
+
+            // Always clear local state (even if not connected)
             bleManager.clearMacDisplayed()
             bleManager.clearSnifferLogs()
+            bleManager.clearSnifferDeauth()
 
             _selectedDevice.value = null
             _connectionState.value = BleConnectionState.Idle
@@ -122,8 +134,12 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     }
 
 
-    fun logLocal(msg: String) {
-        bleManager.pushLocalLog(msg)
+    fun logLocalSniffer(msg: String) {
+        bleManager.pushLocalLogSniffer(msg)
+    }
+
+    fun logLocalDeauth(msg: String) {
+        bleManager.pushLocalLogDeauth(msg)
     }
 
     fun clearMacEvents() {
@@ -136,6 +152,10 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearSnifferLogs() {
         bleManager.clearSnifferLogs()
+    }
+
+    fun clearDeauthLogs() {
+        bleManager.clearSnifferDeauth()
     }
 
     fun notifyEsp32ClearMacs() {
