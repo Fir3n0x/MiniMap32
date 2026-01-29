@@ -30,6 +30,7 @@ import com.example.minimap32.ui.screens.wifi.DeauthScreen
 import com.example.minimap32.ui.screens.wifi.SnifferScreen
 import com.example.minimap32.viewmodel.BleViewModel
 import com.example.minimap32.viewmodel.WifiViewModel
+import kotlinx.coroutines.delay
 
 @SuppressLint("MissingPermission")
 @Composable

@@ -50,7 +50,7 @@ fun DeviceScreen(navController: NavController, viewModel: BleViewModel) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(Color(0xFFCDCDCD))
     ) {
         // Header
         Box(
@@ -63,7 +63,7 @@ fun DeviceScreen(navController: NavController, viewModel: BleViewModel) {
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .padding(start = 16.dp)
-                    .background(Color(0xFF232222), RoundedCornerShape(8.dp))
+                    .background(Color(0xFF1E2624).copy(alpha = 0.8f), RoundedCornerShape(8.dp))
                     .clickable {
                         navController.navigate("login") {
                             popUpTo(0)
@@ -73,7 +73,7 @@ fun DeviceScreen(navController: NavController, viewModel: BleViewModel) {
             ) {
                 Text(
                     text = "<",
-                    color = Color.Green,
+                    color = Color.White.copy(alpha = 0.9f),
                     fontFamily = autowide,
                     fontSize = 35.sp
                 )
@@ -87,7 +87,7 @@ fun DeviceScreen(navController: NavController, viewModel: BleViewModel) {
             ) {
                 Text(
                     text = "Select Device",
-                    color = Color.Green,
+                    color = Color(0xFF363535),
                     fontFamily = autowide,
                     fontSize = 24.sp
                 )
@@ -123,21 +123,21 @@ fun DeviceItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp)
+            .padding(vertical = 6.dp, horizontal = 6.dp)
             .clickable { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF121212)
+            containerColor = Color.Gray.copy(alpha = 0.4f)
         ),
-        border = BorderStroke(1.dp, Color.White)
+        border = BorderStroke(1.dp, Color(0xFF363535))
     ) {
         Text(
             text = deviceName,
-            modifier = Modifier.padding(16.dp),
-            color = Color.White
+            modifier = Modifier.padding(top = 16.dp, start =  16.dp, bottom = 4.dp),
+            color = Color.White.copy(alpha = 0.9f)
         )
         Text(
             text = device.address,
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(bottom = 16.dp, start = 16.dp, top = 4.dp),
             fontSize = 12.sp,
             color = Color.Gray
         )

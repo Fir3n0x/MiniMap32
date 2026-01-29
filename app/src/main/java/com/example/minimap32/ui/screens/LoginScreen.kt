@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -98,7 +99,7 @@ fun LoginScreen(navController: NavController, viewModel: BleViewModel) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(Color(0xFFCDCDCD))
     ) {
         // Main Column
         Column(
@@ -106,7 +107,7 @@ fun LoginScreen(navController: NavController, viewModel: BleViewModel) {
                 .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(Modifier.height(60.dp))
+            Spacer(Modifier.height(150.dp))
 
             // Animation
             // Title at the top
@@ -132,7 +133,7 @@ fun LoginScreen(navController: NavController, viewModel: BleViewModel) {
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                RedScanLine()
+                ScanLine()
             }
 
             Spacer(Modifier.height(80.dp))
@@ -179,9 +180,9 @@ fun LoginScreen(navController: NavController, viewModel: BleViewModel) {
 @Composable
 private fun TerminalTitle(animate: Boolean = true) {
     var showCursor by remember { mutableStateOf(false) }
-    var textToDisplay by remember { mutableStateOf(if (animate) "" else "MINIMAP32") }
+    var textToDisplay by remember { mutableStateOf(if (animate) "" else "ESPion32") }
     var showPrefix by remember { mutableStateOf(animate) }
-    val fullText = "MINIMAP32"
+    val fullText = "ESPion32"
     val prefix = "$> "
     var animationComplete by remember { mutableStateOf(!animate) }
 
@@ -213,7 +214,7 @@ private fun TerminalTitle(animate: Boolean = true) {
             if (showPrefix) {
                 Text(
                     text = prefix,
-                    color = Color(0xFF00FF00),
+                    color = Color(0xFF363535),
                     fontFamily = autowide,
                     fontSize = 48.sp,
                     fontWeight = FontWeight.Bold,
@@ -223,7 +224,7 @@ private fun TerminalTitle(animate: Boolean = true) {
 
             Text(
                 text = textToDisplay,
-                color = Color(0xFF00FF00),
+                color = Color(0xFF363535),
                 fontFamily = autowide,
                 fontSize = 48.sp,
                 fontWeight = FontWeight.Bold,
@@ -240,7 +241,7 @@ private fun TerminalTitle(animate: Boolean = true) {
                     Box(
                         modifier = Modifier
                             .size(4.dp, 48.dp)
-                            .background(Color(0xFF00FF00))
+                            .background(Color(0xFF363535))
                     )
                 }
             }
@@ -250,7 +251,7 @@ private fun TerminalTitle(animate: Boolean = true) {
 }
 
 @Composable
-fun RedScanLine() {
+fun ScanLine() {
     val infiniteTransition = rememberInfiniteTransition()
     val alpha by infiniteTransition.animateFloat(
         initialValue = 0.1f,
@@ -266,7 +267,7 @@ fun RedScanLine() {
             .padding(top = 35.dp)
             .width(120.dp)
             .height(2.dp)
-            .background(Color(0xFFFF2A2A).copy(alpha = alpha))
+            .background(Color(0xFF616060).copy(alpha = alpha))
     )
 }
 
@@ -299,7 +300,7 @@ private fun ConnectButton(
         )
     )
 
-    val redPulse by infiniteTransition.animateFloat(
+    val borderPulse by infiniteTransition.animateFloat(
         initialValue = 0.2f,
         targetValue = 0.6f,
         animationSpec = infiniteRepeatable(
@@ -311,7 +312,8 @@ private fun ConnectButton(
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
-            .size(200.dp)
+            .width(260.dp)
+            .height(120.dp)
             .graphicsLayer {
                 scaleX = if (enabled) pulse else 1f
                 scaleY = if (enabled) pulse else 1f
@@ -319,13 +321,13 @@ private fun ConnectButton(
             }
             .background(
                 color = if (enabled) Color(0xFF1E2624).copy(alpha = 0.8f) else Color.Gray.copy(alpha = 0.4f),
-                shape = CircleShape
+                shape = RoundedCornerShape(22.dp)
             )
             .border(
                 width = 2.dp,
 //                color = if(enabled) Color(0xFFFF2A2A).copy(alpha = redPulse) else Color.Gray.copy(alpha = 0.4f),
-                color = if(enabled) Color(0xFF00FF00).copy(alpha = 0.9f) else Color(0xFFFF2A2A).copy(alpha = redPulse),
-                shape = CircleShape
+                color = if(enabled) Color.White.copy(alpha = 0.9f) else Color(0xFF363535).copy(alpha = borderPulse),
+                shape = RoundedCornerShape(22.dp)
             )
             .then(if (enabled) Modifier.clickable { navController.navigate("connecting") } else Modifier)
             .padding(16.dp)
@@ -333,10 +335,7 @@ private fun ConnectButton(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = if (enabled) "CONNECT" else "SELECT DEVICE",
-                color = if (enabled)
-                    Color.Green.copy(alpha = 0.9f)
-                else
-                    Color.Gray,
+                color = if (enabled) Color.White.copy(alpha = 0.9f) else Color.Gray,
                 fontFamily = autowide,
                 fontSize = if(enabled) 28.sp else 14.sp,
                 fontWeight = FontWeight.Bold
@@ -350,18 +349,6 @@ private fun ConnectButton(
                 fontFamily = autowide,
                 fontSize = 14.sp
             )
-
-            if (enabled) {
-                Text(
-                    text = "OFFENSIVE MODE",
-                    color = Color(0xFF901D1D),
-                    fontFamily = autowide,
-                    fontSize = 12.sp,
-                    letterSpacing = 2.sp,
-                    modifier = Modifier.padding(top = 12.dp)
-                )
-            }
-
         }
     }
 }
@@ -375,12 +362,12 @@ private fun SelectButton(deviceName: String, onClick: () -> Unit) {
             .fillMaxWidth()
             .height(56.dp)
             .background(
-                color = Color(0xFF1A1A1A),
+                color = Color(0xFFA8A8A8),
                 shape = CircleShape
             )
             .border(
                 width = 1.dp,
-                color = Color(0xFF00FF00).copy(alpha = 0.4f),
+                color = Color(0xFF363535).copy(alpha = 0.4f),
                 shape = CircleShape
             )
             .clickable { onClick() }
@@ -388,7 +375,7 @@ private fun SelectButton(deviceName: String, onClick: () -> Unit) {
     ) {
         Text(
             text = deviceName,
-            color = Color.Green,
+            color = Color.White.copy(alpha = 0.9f),
             fontFamily = autowide,
             fontSize = 16.sp,
             maxLines = 1

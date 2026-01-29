@@ -3,12 +3,15 @@ package com.example.minimap32.ui.screens.ble
 import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -69,8 +72,8 @@ fun ConnectingScreen(navController: NavController, viewModel: BleViewModel) {
                 hasNavigated = true
                 val errorMsg = (state as BleConnectionState.Error)
 
-                // Wait before coming back to login page
-                delay(8_000)
+                // Wait before coming back to login page (delay before timeout)
+                delay(10_000)
 
                 // Navigate back to login WITHOUT calling resetSession here
                 // (it will be handled by AppNavigation if needed)
@@ -83,88 +86,122 @@ fun ConnectingScreen(navController: NavController, viewModel: BleViewModel) {
         }
     }
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
-            .padding(top = 170.dp)
+            .background(Color(0xFFCDCDCD))
     ) {
 
-        Column(
+        // HEADER WITH BACK ARROW
+        Box(
             modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black)
-                .padding(24.dp)
+                .fillMaxWidth()
+                .padding(top = 16.dp, bottom = 16.dp)
         ) {
-
-            // title
             Box(
                 modifier = Modifier
-                    .padding(top = 4.dp)
+                    .align(Alignment.TopStart)
+                    .padding(start = 16.dp)
+                    .background(Color(0xFF1E2624).copy(alpha = 0.8f), RoundedCornerShape(8.dp))
+                    .clickable {
+                        navController.navigate("login") {
+                            popUpTo(0)
+                        }
+                    }
+                    .padding(horizontal = 10.dp, vertical = 2.dp)
             ) {
                 Text(
-                    text = "Connecting...",
-                    color = Color.Green,
+                    text = "<",
+                    color = Color.White.copy(alpha = 0.9f),
                     fontFamily = autowide,
-                    fontSize = 24.sp
+                    fontSize = 35.sp
                 )
             }
+        }
 
-            Spacer(modifier = Modifier.height(10.dp))
+        // MAIN CONTENT
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFFCDCDCD))
+                .padding(top = 150.dp)
+        ) {
 
-            // Display information
-            HackerLine(
-                "Connecting to device…",
-                statusFor(BleConnectionState.Connected)
-            )
-            HackerLine(
-                "MTU negotiation…",
-                statusFor(BleConnectionState.MtuRequested)
-            )
-            HackerLine(
-                "Discovering services…",
-                statusFor(BleConnectionState.ServicesDiscovered)
-            )
-            HackerLine(
-                "Device ready",
-                statusFor(BleConnectionState.Ready)
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp)
+            ) {
 
-            // Handle error message
-            if (state is BleConnectionState.Error) {
-                // Show error message if error occurred
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Error: ${(state as BleConnectionState.Error)}",
-                    color = Color.Red,
-                    fontSize = 12.sp,
-                    fontFamily = autowide
-                )
-
-                // Show retry button on error
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = {
-                        hasNavigated = true
-                        navController.navigate("login") {
-                            popUpTo("connecting") { inclusive = true }
-                        }
-                    },
+                // title
+                Box(
                     modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .padding(top = 24.dp)
-                        .border(1.dp, Color(0xFF00FF00)),
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF121212),
-                        contentColor = Color(0xFF00FF00)
-                    )
+                        .padding(top = 4.dp)
                 ) {
                     Text(
-                        text = "BACK TO LOGIN",
+                        text = "Connecting...",
+                        color = Color(0xFF363535),
                         fontFamily = autowide,
-                        fontSize = 14.sp,
-                        letterSpacing = 1.sp
+                        fontSize = 24.sp
                     )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Display information
+                HackerLine(
+                    "Connecting to device…",
+                    statusFor(BleConnectionState.Connected)
+                )
+                HackerLine(
+                    "MTU negotiation…",
+                    statusFor(BleConnectionState.MtuRequested)
+                )
+                HackerLine(
+                    "Discovering services…",
+                    statusFor(BleConnectionState.ServicesDiscovered)
+                )
+                HackerLine(
+                    "Device ready",
+                    statusFor(BleConnectionState.Ready)
+                )
+
+                // Handle error message
+                if (state is BleConnectionState.Error) {
+                    // Show error message if error occurred
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Error: ${(state as BleConnectionState.Error)}",
+                        color = Color.Red.copy(alpha = 0.8f),
+                        fontSize = 12.sp,
+                        fontFamily = autowide
+                    )
+
+                    // Show retry button on error
+                    //                Spacer(modifier = Modifier.height(16.dp))
+                    //                Button(
+                    //                    onClick = {
+                    //                        hasNavigated = true
+                    //                        navController.navigate("login") {
+                    //                            popUpTo("connecting") { inclusive = true }
+                    //                        }
+                    //                    },
+                    //                    modifier = Modifier
+                    //                        .align(Alignment.CenterHorizontally)
+                    //                        .padding(top = 24.dp)
+                    //                        .border(1.dp, Color(0xFF00FF00)),
+                    //                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    //                        containerColor = Color(0xFF121212),
+                    //                        contentColor = Color(0xFF00FF00)
+                    //                    )
+                    //                ) {
+                    //                    Text(
+                    //                        text = "BACK TO LOGIN",
+                    //                        fontFamily = autowide,
+                    //                        fontSize = 14.sp,
+                    //                        letterSpacing = 1.sp
+                    //                    )
+                    //                }
                 }
             }
         }
@@ -183,8 +220,8 @@ fun HackerLine(text: String, status: LineStatus) {
 
     val color = when (status) {
         LineStatus.PENDING -> Color.Gray
-        LineStatus.SUCCESS -> Color(0xFF00FF00)
-        LineStatus.ERROR -> Color.Red
+        LineStatus.SUCCESS -> Color.White.copy(alpha = 0.7f)
+        LineStatus.ERROR -> Color.Red.copy(alpha = 0.8f)
     }
 
     val prefix = when (status) {

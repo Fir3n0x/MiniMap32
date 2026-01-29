@@ -74,7 +74,7 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
     var highlightMacs by remember { mutableStateOf(false) }
     var lastMacCount by remember { mutableStateOf(0) }
     val borderColor by animateColorAsState(
-        targetValue = if (highlightMacs) Color(0xFF00FF00) else Color(0xFF1E2624),
+        targetValue = if (highlightMacs) Color.White.copy(alpha = 0.9f) else Color(0xFF1E2624),
         label = "mac-border"
     )
 
@@ -150,7 +150,7 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.Black)
+            .background(Color(0xFFCDCDCD))
     ) {
         // Header
         Box(
@@ -163,7 +163,7 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .padding(start = 16.dp)
-                    .background(Color(0xFF232222), RoundedCornerShape(8.dp))
+                    .background(Color(0xFF1E2624).copy(alpha = 0.8f), RoundedCornerShape(8.dp))
                     .clickable {
                         navController.navigate("connected") {
                             popUpTo("sniffer") { inclusive = true }
@@ -173,7 +173,7 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
             ) {
                 Text(
                     text = "<",
-                    color = Color.Green,
+                    color = Color.White.copy(alpha = 0.9f),
                     fontFamily = autowide,
                     fontSize = 35.sp
                 )
@@ -187,7 +187,7 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
             ) {
                 Text(
                     text = "Sniffer Panel",
-                    color = Color.Green,
+                    color = Color(0xFF363535),
                     fontFamily = autowide,
                     fontSize = 24.sp
                 )
@@ -205,7 +205,7 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
             // Target Network
             Text(
                 text = "Target Network",
-                color = Color.Green,
+                color = Color(0xFF363535),
                 fontFamily = autowide,
                 fontSize = 16.sp,
                 modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -232,7 +232,7 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
                 ) {
                     Text(
                         text = "Detected MACs" + " (${detectedMacs.size})",
-                        color = Color.Green,
+                        color = Color(0xFF363535),
                         fontFamily = autowide,
                         fontSize = 12.sp
                     )
@@ -240,7 +240,7 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
                     Box(
                         modifier = Modifier
                             .size(24.dp)
-                            .background(Color(0xFFCC0000), RoundedCornerShape(4.dp))
+                            .background(Color(0xFF1E2624), RoundedCornerShape(4.dp))
                             .clickable {
                                 // Cleaning action
                                 bleViewModel.clearMacEvents()
@@ -248,7 +248,7 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("X", color = Color.White, fontSize = 14.sp)
+                        Text("X", color = Color.White.copy(alpha = 0.4f), fontSize = 14.sp)
                     }
                 }
 
@@ -258,7 +258,7 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(140.dp)
-                        .background(Color(0xFF1A1A1A), RoundedCornerShape(6.dp))
+                        .background(Color(0xFF0F0F0F), RoundedCornerShape(6.dp))
                         .border(
                             width = 2.dp,
                             color = borderColor,
@@ -284,13 +284,13 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .background(Color(0xFF0F0F0F), RoundedCornerShape(4.dp))
+                                        .background(Color(0xFF1E2624), RoundedCornerShape(4.dp))
                                         .padding(8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
                                         text = mac,
-                                        color = Color.White,
+                                        color = Color.White.copy(alpha = 0.9f),
                                         fontFamily = FontFamily.Monospace,
                                         fontSize = 12.sp,
                                         modifier = Modifier.weight(1f)
@@ -300,7 +300,7 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
 
                                     Text(
                                         text = "$rssi dBm",
-                                        color = Color(0xFF00FF00),
+                                        color = Color.Gray,
                                         fontFamily = FontFamily.Monospace,
                                         fontSize = 10.sp
                                     )
@@ -320,7 +320,7 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
                 ) {
                     Text(
                         text = "Attack Logs",
-                        color = Color.Green,
+                        color = Color(0xFF363535),
                         fontFamily = autowide,
                         fontSize = 12.sp
                     )
@@ -328,7 +328,7 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
                     Box(
                         modifier = Modifier
                             .size(24.dp)
-                            .background(Color(0xFFCC0000), RoundedCornerShape(4.dp))
+                            .background(Color(0xFF1E2624), RoundedCornerShape(4.dp))
                             .clickable {
                                 // Cleaning action
                                 bleViewModel.clearSnifferLogs()
@@ -336,7 +336,7 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("X", color = Color.White, fontSize = 14.sp)
+                        Text("X", color = Color.White.copy(alpha = 0.4f), fontSize = 14.sp)
                     }
                 }
 
@@ -346,8 +346,8 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(200.dp)
-                        .background(Color(0xFF0A0A0A), RoundedCornerShape(6.dp))
-                        .border(1.dp, Color(0xFF1E2624), RoundedCornerShape(6.dp))
+                        .background(Color.Gray.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                        .border(1.dp, Color(0xFF363535), RoundedCornerShape(6.dp))
                         .padding(12.dp)
                 ) {
                     LazyColumn(
@@ -357,8 +357,7 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
                         items(attackLogs) { log ->
                             Text(
                                 text = "> $log",
-//                                color = Color(0xFF00FF00),
-                                color = Color.White,
+                                color = Color.White.copy(alpha = 0.9f),
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 11.sp
                             )
@@ -400,7 +399,7 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
                 ) {
                     Text(
                         text = if (isAttackRunning) "STOP ATTACK" else "LAUNCH ATTACK",
-                        color = if (safetyCheckbox) Color.Green else Color.Gray,
+                        color = if (safetyCheckbox) Color.White.copy(alpha = 0.9f) else Color.Gray,
                         fontFamily = autowide,
                         fontSize = 16.sp
                     )
@@ -411,20 +410,23 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
                 // Safety Checkbox
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable { safetyCheckbox = !safetyCheckbox }
+                    modifier = Modifier
+                        .background(Color(0xFF1E2624).copy(alpha = 0.8f), shape = RoundedCornerShape(8.dp))
+                        .clickable { safetyCheckbox = !safetyCheckbox }
+                        .padding(horizontal = 8.dp)
                 ) {
                     Box(
                         modifier = Modifier
                             .size(24.dp)
                             .background(
-                                if (safetyCheckbox) Color(0xFF00FF00) else Color(0xFF1A1A1A),
+                                if (safetyCheckbox) Color(0xFF1A1A1A) else Color(0xFF1A1A1A),
                                 RoundedCornerShape(4.dp)
                             )
                             .border(1.dp, Color(0xFF1E2624), RoundedCornerShape(4.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         if (safetyCheckbox) {
-                            Text("X", color = Color.Black, fontSize = 16.sp)
+                            Text("X", color = Color.White.copy(alpha = 0.9f), fontSize = 16.sp)
                         }
                     }
 
@@ -432,7 +434,7 @@ fun SnifferScreen(navController: NavController, bleViewModel: BleViewModel, wifi
 
                     Text(
                         text = "Safety",
-                        color = Color.Green,
+                        color = Color.White.copy(alpha = 0.9f),
                         fontFamily = autowide,
                         fontSize = 12.sp
                     )

@@ -132,7 +132,7 @@ fun DeauthScreen(navController: NavController, bleViewModel: BleViewModel, wifiV
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.Black)
+            .background(Color(0xFFCDCDCD))
     ) {
         // Header
         Box(
@@ -145,7 +145,7 @@ fun DeauthScreen(navController: NavController, bleViewModel: BleViewModel, wifiV
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .padding(start = 16.dp)
-                    .background(Color(0xFF232222), RoundedCornerShape(8.dp))
+                    .background(Color(0xFF1E2624).copy(alpha = 0.8f), RoundedCornerShape(8.dp))
                     .clickable {
                         navController.navigate("connected") {
                             popUpTo("deauth") { inclusive = true }
@@ -155,7 +155,7 @@ fun DeauthScreen(navController: NavController, bleViewModel: BleViewModel, wifiV
             ) {
                 Text(
                     text = "<",
-                    color = Color.Green,
+                    color = Color.White.copy(alpha = 0.9f),
                     fontFamily = autowide,
                     fontSize = 35.sp
                 )
@@ -169,7 +169,7 @@ fun DeauthScreen(navController: NavController, bleViewModel: BleViewModel, wifiV
             ) {
                 Text(
                     text = "Deauth Panel",
-                    color = Color.Green,
+                    color = Color(0xFF363535),
                     fontFamily = autowide,
                     fontSize = 24.sp
                 )
@@ -187,7 +187,7 @@ fun DeauthScreen(navController: NavController, bleViewModel: BleViewModel, wifiV
             // Target Network
             Text(
                 text = "Target Network",
-                color = Color.Green,
+                color = Color(0xFF363535),
                 fontFamily = autowide,
                 fontSize = 16.sp,
                 modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -210,7 +210,7 @@ fun DeauthScreen(navController: NavController, bleViewModel: BleViewModel, wifiV
                 // MAC Address Input
                 Text(
                     text = "Target MAC Address",
-                    color = Color.Green,
+                    color = Color(0xFF363535),
                     fontFamily = autowide,
                     fontSize = 12.sp
                 )
@@ -252,7 +252,7 @@ fun DeauthScreen(navController: NavController, bleViewModel: BleViewModel, wifiV
                 ) {
                     Text(
                         text = "Attack Logs",
-                        color = Color.Green,
+                        color = Color(0xFF363535),
                         fontFamily = autowide,
                         fontSize = 12.sp
                     )
@@ -260,14 +260,14 @@ fun DeauthScreen(navController: NavController, bleViewModel: BleViewModel, wifiV
                     Box(
                         modifier = Modifier
                             .size(24.dp)
-                            .background(Color(0xFFCC0000), RoundedCornerShape(4.dp))
+                            .background(Color(0xFF1E2624), RoundedCornerShape(4.dp))
                             .clickable {
                                 // Cleaning action
                                 bleViewModel.clearDeauthLogs()
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("X", color = Color.White, fontSize = 14.sp)
+                        Text("X", color = Color.White.copy(alpha = 0.4f), fontSize = 14.sp)
                     }
                 }
 
@@ -277,8 +277,8 @@ fun DeauthScreen(navController: NavController, bleViewModel: BleViewModel, wifiV
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(200.dp)
-                        .background(Color(0xFF0A0A0A), RoundedCornerShape(6.dp))
-                        .border(1.dp, Color(0xFF1E2624), RoundedCornerShape(6.dp))
+                        .background(Color.Gray.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                        .border(1.dp, Color(0xFF363535), RoundedCornerShape(6.dp))
                         .padding(12.dp)
                 ) {
                     LazyColumn(
@@ -288,7 +288,7 @@ fun DeauthScreen(navController: NavController, bleViewModel: BleViewModel, wifiV
                         items(attackLogs) { log ->
                             Text(
                                 text = "> $log",
-                                color = Color.White,
+                                color = Color.White.copy(alpha = 0.9f),
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 11.sp
                             )
@@ -330,7 +330,7 @@ fun DeauthScreen(navController: NavController, bleViewModel: BleViewModel, wifiV
                 ) {
                     Text(
                         text = if (isAttackRunning) "STOP ATTACK" else "LAUNCH ATTACK",
-                        color = if (safetyCheckbox) Color.Green else Color.Gray,
+                        color = if (safetyCheckbox) Color.White.copy(alpha = 0.9f) else Color.Gray,
                         fontFamily = autowide,
                         fontSize = 16.sp
                     )
@@ -347,14 +347,14 @@ fun DeauthScreen(navController: NavController, bleViewModel: BleViewModel, wifiV
                         modifier = Modifier
                             .size(24.dp)
                             .background(
-                                if (safetyCheckbox) Color(0xFF00FF00) else Color(0xFF1A1A1A),
+                                if (safetyCheckbox) Color(0xFF1A1A1A) else Color(0xFF1A1A1A),
                                 RoundedCornerShape(4.dp)
                             )
                             .border(1.dp, Color(0xFF1E2624), RoundedCornerShape(4.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         if (safetyCheckbox) {
-                            Text("X", color = Color.Black, fontSize = 16.sp)
+                            Text("X", color = Color.White.copy(alpha = 0.9f), fontSize = 16.sp)
                         }
                     }
 
@@ -362,7 +362,7 @@ fun DeauthScreen(navController: NavController, bleViewModel: BleViewModel, wifiV
 
                     Text(
                         text = "Safety",
-                        color = Color.Green,
+                        color = Color.White.copy(alpha = 0.9f),
                         fontFamily = autowide,
                         fontSize = 12.sp
                     )

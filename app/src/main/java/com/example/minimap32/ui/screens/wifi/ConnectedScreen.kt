@@ -5,6 +5,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -19,12 +20,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -46,6 +50,12 @@ import com.example.minimap32.viewmodel.BleViewModel
 import com.example.minimap32.viewmodel.WifiViewModel
 import kotlinx.coroutines.delay
 
+// Track where we come from
+object ConnectedScreenState {
+    var hasScannedOnce by mutableStateOf(false)
+    var previousScreen: String? = null
+}
+
 @SuppressLint("MissingPermission")
 @Composable
 fun ConnectedScreen(navController: NavController, bleViewModel: BleViewModel, wifiViewModel: WifiViewModel) {
@@ -57,28 +67,63 @@ fun ConnectedScreen(navController: NavController, bleViewModel: BleViewModel, wi
     val networks by wifiViewModel.networks.collectAsState()
     val selected by wifiViewModel.selectedNetwork.collectAsState()
 
-    // Expand wifi info
-    var expanded by remember { mutableStateOf(false) }
+    // Previous screen
+    val previousRoute = navController.previousBackStackEntry?.destination?.route
 
     BackHandler {
         navController.navigate("login") {
-            popUpTo(0) // Empty the stack
+            popUpTo(0)
         }
     }
 
-    // Launch wifi scan when the page is displaying
+    // Automatic scan only once
     LaunchedEffect(Unit) {
-        wifiViewModel.scanWifi()
-        // Stop attack
-        stopSnifferAttack(bleViewModel)
-        stopDeauthAttack(bleViewModel)
+        // save where we come from
+        ConnectedScreenState.previousScreen = previousRoute
+
+        // scan if never done
+        if (!ConnectedScreenState.hasScannedOnce) {
+            wifiViewModel.scanWifi()
+            ConnectedScreenState.hasScannedOnce = true
+        }
+
+        // Stop active attack
+        delay(200)
+        when (previousRoute) {
+            "sniffer" -> {
+                stopSnifferAttack(bleViewModel)
+            }
+            "deauth" -> {
+                stopDeauthAttack(bleViewModel)
+            }
+            "beacon" -> {
+                // stopBeaconAttack(bleViewModel)
+            }
+            else -> {
+                // if we don't know where we come from
+                stopSnifferAttack(bleViewModel)
+                delay(1000)
+                stopDeauthAttack(bleViewModel)
+            }
+        }
+    }
+
+    // reset
+    DisposableEffect(Unit) {
+        onDispose {
+            // reset flag
+            val currentRoute = navController.currentBackStackEntry?.destination?.route
+            if (currentRoute == "login") {
+                ConnectedScreenState.hasScannedOnce = false
+            }
+        }
     }
 
     // Content box
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.Black)
+            .background(Color(0xFFCDCDCD))
     ){
         // Header
         Box(
@@ -91,7 +136,7 @@ fun ConnectedScreen(navController: NavController, bleViewModel: BleViewModel, wi
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .padding(start = 16.dp)
-                    .background(Color(0xFF232222), RoundedCornerShape(8.dp))
+                    .background(Color(0xFF1E2624).copy(alpha = 0.8f), RoundedCornerShape(8.dp))
                     .clickable {
                         navController.navigate("login") {
                             popUpTo(0)
@@ -101,7 +146,7 @@ fun ConnectedScreen(navController: NavController, bleViewModel: BleViewModel, wi
             ) {
                 Text(
                     text = "<",
-                    color = Color.Green,
+                    color = Color.White.copy(alpha = 0.9f),
                     fontFamily = autowide,
                     fontSize = 35.sp
                 )
@@ -115,7 +160,7 @@ fun ConnectedScreen(navController: NavController, bleViewModel: BleViewModel, wi
             ) {
                 Text(
                     text = "Control Panel",
-                    color = Color.Green,
+                    color = Color(0xFF363535),
                     fontFamily = autowide,
                     fontSize = 24.sp
                 )
@@ -147,7 +192,7 @@ fun ConnectedScreen(navController: NavController, bleViewModel: BleViewModel, wi
             // Target Network
             Text(
                 text = "Target Network",
-                color = Color.Green,
+                color = Color(0xFF363535),
                 fontFamily = autowide,
                 fontSize = 16.sp,
                 modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -162,19 +207,9 @@ fun ConnectedScreen(navController: NavController, bleViewModel: BleViewModel, wi
             // Wifi Info collapsible
             WifiInfoSection(selected)
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(24.dp))
 
-            // Actions
-            Text(
-                text = "Actions",
-                color = Color.Green,
-                fontFamily = autowide,
-                fontSize = 16.sp
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            ActionsRow(navController, selected)
+            AttacksColumn(navController, selected)
         }
     }
 }
@@ -186,12 +221,12 @@ fun TargetNetworkRow(
     selected: WifiNetwork?
 ) {
     var expanded by remember { mutableStateOf(false) }
-    var selectedNetwork by remember { mutableStateOf<String?>(null) }
     val isScanning by wifiViewModel.isScanning.collectAsState()
 
     // Observe refresh button
     val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
+    val isPressedReload by interactionSource.collectIsPressedAsState()
+    val isPressedRemove by interactionSource.collectIsPressedAsState()
 
     LaunchedEffect(selected) {
         if (selected == null) {
@@ -217,7 +252,7 @@ fun TargetNetworkRow(
         ) {
             Text(
                 text = selected?.displayName() ?: "Select a network",
-                color = Color.White,
+                color = Color.White.copy(alpha = 0.9f),
                 fontFamily = autowide
             )
 
@@ -261,25 +296,25 @@ fun TargetNetworkRow(
         Box(
             modifier = Modifier
                 .padding(start = 8.dp)
-                .background(Color(0xFF232222), RoundedCornerShape(6.dp))
+                .background(if (isPressedRemove) Color(0xFF3A3A3A) else Color(0xFF1E2624).copy(alpha = 0.8f), RoundedCornerShape(6.dp))
                 .clickable { wifiViewModel.clearSelection() }
                 .padding(10.dp)
         ) {
-            Text("X", color = Color.Red)
+            Text("X", color = if(isPressedRemove) Color.Black else Color.White.copy(alpha = 0.4f))
         }
 
         // Refresh button
         Box(
             modifier = Modifier
                 .padding(start = 8.dp)
-                .background(if (isPressed) Color(0xFF3A3A3A) else Color(0xFF232222), RoundedCornerShape(6.dp))
+                .background(if (isPressedReload) Color(0xFF3A3A3A) else Color(0xFF1E2624).copy(alpha = 0.8f), RoundedCornerShape(6.dp))
                 .clickable (
                     interactionSource = interactionSource,
                     indication = null
                 ){ wifiViewModel.scanWifi() }
                 .padding(10.dp)
         ) {
-            Text("↻", color = if(isPressed) Color.Yellow else Color.Green)
+            Text("↻", color = if(isPressedReload) Color.Black else Color.White.copy(alpha = 0.4f))
         }
 
     }
@@ -289,74 +324,115 @@ fun TargetNetworkRow(
 @Composable
 fun WifiInfoSection(selected: WifiNetwork?) {
 
-    var infoExpanded by remember { mutableStateOf(true) }
+    var infoExpanded by remember { mutableStateOf(false) }
+
+    LaunchedEffect(selected) {
+        infoExpanded = selected != null
+    }
+
+    if(selected == null) return
 
     Spacer(Modifier.height(24.dp))
+
+    // Don't show without selecting a network
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { infoExpanded = !infoExpanded }
+            .clickable {
+                infoExpanded = !infoExpanded
+            }
+            .padding(vertical = 8.dp)
     ) {
         Text(
-            text = "> Wifi Info",
-            color = Color.Green,
-            fontFamily = FontFamily.Monospace
+            text = if (infoExpanded) "⌄ Wifi Info" else "> Wifi Info",
+            color = Color(0xFF363535),
+            fontFamily = autowide,
+            fontSize = 16.sp
         )
     }
 
-    if (infoExpanded && selected != null) {
-        AnimatedVisibility(visible = true) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp)
-                    .background(Color(0xFF121212), RoundedCornerShape(6.dp))
-            ) {
-                Text("SSID: ${selected.ssid}", color = Color.White)
-                Text("BSSID: ${selected.bssid}", color = Color.White)
-                Text("RSSI: ${selected.level} dBm", color = Color.White)
-                Text("Frequency: ${selected.frequency} MHz", color = Color.White)
-                Text("Channel: ${selected.channel}", color = Color.White)
-            }
+
+    AnimatedVisibility(visible = infoExpanded) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
+                .background(Color.Gray.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                .border(1.dp, Color(0xFF363535), RoundedCornerShape(8.dp))
+                .padding(12.dp)
+        ) {
+            Text("SSID: ${selected.ssid}", color = Color.White.copy(alpha = 0.9f))
+            Text("BSSID: ${selected.bssid}", color = Color.White.copy(alpha = 0.9f))
+            Text("RSSI: ${selected.level} dBm", color = Color.White.copy(alpha = 0.9f))
+            Text("Frequency: ${selected.frequency} MHz", color = Color.White.copy(alpha = 0.9f))
+            Text("Channel: ${selected.channel}", color = Color.White.copy(alpha = 0.9f))
         }
     }
+
 }
 
 
 @Composable
-fun ActionsRow(navController: NavController, selected: WifiNetwork?) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly
+fun AttacksColumn(
+    navController: NavController,
+    selected: WifiNetwork?
+) {
+    if (selected == null) return
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .border(1.dp, Color(0xFF1A1A1A), RoundedCornerShape(12.dp))
+            .background(Color(0xFF0F0F0F), RoundedCornerShape(12.dp))
     ) {
-        if(selected != null) {
-            ActionButton("Sniffer") {
-                navController.navigate("sniffer")
-            }
 
-            ActionButton("Deauth") {
-                navController.navigate("deauth")
-            }
+        // Title
+        Text(
+            text = "Actions",
+            color = Color.White.copy(alpha = 0.9f),
+            fontFamily = autowide,
+            fontSize = 18.sp,
+            modifier = Modifier
+                .padding(16.dp)
+        )
 
-            ActionButton("Beacon") {
-                navController.navigate("beacon")
-            }
+        // Scrollable
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(220.dp) // hauteur visible
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+
+            // Boutons dans la zone scrollable
+            ActionButton("Sniffer") { navController.navigate("sniffer") }
+            Spacer(Modifier.height(12.dp))
+
+            ActionButton("Deauth") { navController.navigate("deauth") }
+            Spacer(Modifier.height(12.dp))
+
+            ActionButton("Beacon") { navController.navigate("beacon") }
+            Spacer(Modifier.height(12.dp))
         }
     }
 }
+
 
 @Composable
 fun ActionButton(label: String, onClick: () -> Unit) {
     Box(
         modifier = Modifier
+            .fillMaxWidth()
             .background(Color(0xFF1E2624), RoundedCornerShape(8.dp))
             .clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
         Text(
             text = label,
-            color = Color.Green,
+            color = Color.White.copy(alpha = 0.9f),
             fontFamily = autowide,
             fontSize = 14.sp
         )
@@ -371,11 +447,11 @@ fun DisplayTargetedNetwork(
         modifier = Modifier
             .fillMaxWidth()
             .padding(12.dp)
-            .background(Color(0xFF121212), RoundedCornerShape(6.dp))
+            .background(Color(0xFF1A1A1A), RoundedCornerShape(6.dp))
     ) {
         Text(
             text = if(selected?.ssid != null) selected.displayName() else "Unknown network",
-            color = Color.White,
+            color = Color.White.copy(alpha = 0.9f),
             fontFamily = autowide,
             fontSize = 14.sp
         )

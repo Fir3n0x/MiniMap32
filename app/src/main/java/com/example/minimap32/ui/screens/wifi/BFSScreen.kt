@@ -56,7 +56,7 @@ fun BFSScreen(navController: NavController, bleViewModel: BleViewModel, wifiView
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.Black)
+            .background(Color(0xFFCDCDCD))
     ) {
         // Header
         Box(
@@ -69,7 +69,7 @@ fun BFSScreen(navController: NavController, bleViewModel: BleViewModel, wifiView
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .padding(start = 16.dp)
-                    .background(Color(0xFF232222), RoundedCornerShape(8.dp))
+                    .background(Color(0xFF1E2624).copy(alpha = 0.8f), RoundedCornerShape(8.dp))
                     .clickable {
                         navController.navigate("connected") {
                             popUpTo("deauth") { inclusive = true }
@@ -79,7 +79,7 @@ fun BFSScreen(navController: NavController, bleViewModel: BleViewModel, wifiView
             ) {
                 Text(
                     text = "<",
-                    color = Color.Green,
+                    color = Color.White.copy(alpha = 0.9f),
                     fontFamily = autowide,
                     fontSize = 35.sp
                 )
@@ -93,7 +93,7 @@ fun BFSScreen(navController: NavController, bleViewModel: BleViewModel, wifiView
             ) {
                 Text(
                     text = "BFS Panel",
-                    color = Color.Green,
+                    color = Color(0xFF363535),
                     fontFamily = autowide,
                     fontSize = 24.sp
                 )
@@ -145,7 +145,7 @@ fun BFSScreen(navController: NavController, bleViewModel: BleViewModel, wifiView
                 ) {
                     Text(
                         text = if (isAttackRunning) "STOP ATTACK" else "LAUNCH ATTACK",
-                        color = if (safetyCheckbox) Color.Green else Color.Gray,
+                        color = if (safetyCheckbox) Color.White.copy(alpha = 0.9f) else Color.Gray,
                         fontFamily = autowide,
                         fontSize = 16.sp
                     )
@@ -162,14 +162,14 @@ fun BFSScreen(navController: NavController, bleViewModel: BleViewModel, wifiView
                         modifier = Modifier
                             .size(24.dp)
                             .background(
-                                if (safetyCheckbox) Color(0xFF00FF00) else Color(0xFF1A1A1A),
+                                if (safetyCheckbox) Color(0xFF1A1A1A) else Color(0xFF1A1A1A),
                                 RoundedCornerShape(4.dp)
                             )
                             .border(1.dp, Color(0xFF1E2624), RoundedCornerShape(4.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         if (safetyCheckbox) {
-                            Text("X", color = Color.Black, fontSize = 16.sp)
+                            Text("X", color = Color.White.copy(alpha = 0.9f), fontSize = 16.sp)
                         }
                     }
 
@@ -177,7 +177,7 @@ fun BFSScreen(navController: NavController, bleViewModel: BleViewModel, wifiView
 
                     Text(
                         text = "Safety",
-                        color = Color.Green,
+                        color = Color.White.copy(alpha = 0.9f),
                         fontFamily = autowide,
                         fontSize = 12.sp
                     )
