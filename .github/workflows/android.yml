@@ -78,7 +78,7 @@ jobs:
     
         for f in release-apks/*.apk; do
           if [[ "$f" != *"debug"* ]]; then
-            new_name="release-apks/MiniMap32-v${VERSION}.apk"
+            new_name="release-apks/ESPion32-v${VERSION}.apk"
             mv "$f" "$new_name"
           else
             rm "$f"
@@ -124,7 +124,7 @@ jobs:
       run: |
         cd apk-files
         # Keep only the properly named APK
-        ls | grep -v 'MiniMap32-v' | xargs rm -f
+        ls | grep -v 'ESPion32-v' | xargs rm -f
         ls -la
 
     - name: Verify APK exists
@@ -152,7 +152,7 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ needs.build.outputs.TAG_NAME }}
-        name: MiniMap32 ${{ needs.build.outputs.TAG_NAME }}
+        name: ESPion32 ${{ needs.build.outputs.TAG_NAME }}
         body: |
           ### Version ${{ needs.build.outputs.VERSION }}
           Release automatically generated from GitHub Actions
