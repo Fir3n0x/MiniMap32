@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "MiniMap32"
+rootProject.name = "ESPion32"
 include(":app")
  

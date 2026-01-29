@@ -5,13 +5,13 @@ plugins {
 }
 
 android {
-    namespace = "com.example.minimap32"
+    namespace = "com.example.espion32"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "com.example.minimap32"
+        applicationId = "com.example.espion32"
         minSdk = 23
         targetSdk = 35
         versionCode = 1
